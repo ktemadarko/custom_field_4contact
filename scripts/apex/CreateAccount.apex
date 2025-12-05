@@ -2,8 +2,8 @@
 Account new_acc = new Account();
 new_acc.Name = 'Get Cloudy';
 new_acc.Phone = '775-555-5309';
-new_acc.AccountNumber = 117;
-new_Site = 'Single Location';
+new_acc.AccountNumber = '117';
+new_acc.Site = 'Single Location';
 new_acc.Type = 'Customer - Direct';
 new_acc.Industry = 'Consulting';
 new_acc.BillingCity = 'Reno';
@@ -19,18 +19,18 @@ if (hasCountryPicklists) {
     System.debug('State/Country Picklists are ON. Using ISO Codes.');
     
     // We use .put() so the code doesn't crash if these fields don't exist
-    newAcc.put('BillingStateCode', 'NV');
+    new_acc.put('BillingStateCode', 'NV');
     
 } else {
     // SYSTEM IS LOOSE (Text Fields)
     System.debug('State/Country Picklists are OFF. Using Text.');
-    newAcc.BillingState = 'Nevada';
+    new_acc.BillingState = 'Nevada';
 }
 
 // 4. SAVE: Use Try/Catch to handle any other errors (like Validation Rules)
 try {
-    insert newAcc;
-    System.debug('SUCCESS! Created Account: ' + newAcc.Id);
+    insert new_acc;
+    System.debug('SUCCESS! Created Account: ' + new_acc.Name);
 } catch (DmlException e) {
     // This catches errors like "Required Field Missing" or "Duplicate Value"
     System.debug('ERROR: Could not create Account.');
