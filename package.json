@@ -4,15 +4,22 @@
   "version": "1.0.0",
   "description": "Salesforce App",
   "scripts": {
-    "build": "npx ts-node scripts/ts/createFields.ts",
+    "build": "ts-node scripts/ts/createFields.ts",
     "lint": "eslint **/{aura,lwc}/**/*.js",
-    "test": "npm run test:unit",
+    
+    "test": "npm run test:unit && npm run test:builder",
     "test:unit": "sfdx-lwc-jest",
+    "test:builder": "vitest run",
     "test:unit:watch": "sfdx-lwc-jest --watch",
     "test:unit:debug": "sfdx-lwc-jest --debug",
     "test:unit:coverage": "sfdx-lwc-jest --coverage",
+    
+    "format": "npm run prettier",
     "prettier": "prettier --write \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
     "prettier:verify": "prettier --check \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
+    
+    "deploy": "npm run build && npm run format && sf project deploy start",
+    
     "prepare": "husky || true",
     "precommit": "lint-staged"
   },
@@ -32,7 +39,7 @@
     "prettier-plugin-apex": "^2.2.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.15"
+    "vitest": "^1.0.0" 
   },
   "lint-staged": {
     "**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}": [
