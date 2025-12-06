@@ -200,7 +200,7 @@ if (require.main === module) {
 
     // 3. Create Records
     const myRecords: RecordDefinition[] = [
-        { Name: AmaVilla, 
+        { Name: 'AmaVilla', 
           Price__c: 500000}// Missing Address! Should verify auto-null
     ];
 
