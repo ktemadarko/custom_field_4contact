@@ -1,60 +1,126 @@
 // ============================================================================
 // 1. IMPORTS
 // ============================================================================
-// We import built-in Node.js tools.
-// 'fs' (File System) lets us create folders and write files.
-// 'path' helps us combine folder names safely (e.g., handles '/' vs '\' on Windows).
 import * as fs from 'fs';
 import * as path from 'path';
 
 // ============================================================================
-// 2. TYPESCRIPT DEFINITIONS (The Rules)
+// 2. DEFINITIONS (The Contracts)
 // ============================================================================
 
-// A "Type Alias". This is a custom list of allowed text strings.
-// If you try to use a type that isn't in this list (like "Money"), TypeScript will show an error.
-export type FieldType = 
-    | 'Text' 
-    | 'Number' 
-    | 'Currency' 
-    | 'Checkbox' 
-    | 'Date' 
-    | 'DateTime' 
-    | 'Email' 
-    | 'Percent' 
-    | 'Phone' 
-    | 'Url' 
-    | 'TextArea';
+// A list of allowed field types.
+export type FieldType = 'Text' | 'Number' | 'Currency' | 'Checkbox' | 'Date' | 'DateTime' | 'Email' | 'Percent' | 'Phone' | 'Url' | 'TextArea';
 
-// An "Interface". This defines the shape of a "Field" object.
-// It ensures every field we try to create has a name, a valid type, and a description.
+// The shape of a Field.
 export interface FieldDefinition {
-    name: string;          // e.g., "Start_Date"
-    type: FieldType;       // Must be one of the options above
-    description: string;   // e.g., "The day the project starts"
+    name: string;
+    type: FieldType;
+    description: string;
+    required?: boolean; // Optional: Default is false unless specified
+}
+
+// The shape of a Record (Can have any keys).
+export interface RecordDefinition {
+    [key: string]: any;
 }
 
 // ============================================================================
-// 3. HELPER FUNCTION: Create the Object Folder & XML
+// 3. HELPER: Find Fields (Scans your hard drive)
+// ============================================================================
+// This looks at the files we just built to see which ones are "Required".
+export function findFields(targetObject: string, rootDir: string): string[] {
+    const objectFolder = path.join(rootDir, `${targetObject}__c`);
+    const fieldsFolder = path.join(objectFolder, 'fields');
+
+    // Safety check: Does the folder exist?
+    if (!fs.existsSync(fieldsFolder)) {
+        return [];
+    }
+
+    // Read all files in the fields folder
+    const files = fs.readdirSync(fieldsFolder);
+    const requiredFields: string[] = [];
+
+    files.forEach(file => {
+        const content = fs.readFileSync(path.join(fieldsFolder, file), 'utf8');
+        const nameMatch = content.match(/<fullName>(.*?)<\/fullName>/);
+        
+        // Check if the file says <required>true</required>
+        const isRequired = content.includes('<required>true</required>');
+
+        if (nameMatch && isRequired) {
+            requiredFields.push(nameMatch[1]);
+        }
+    });
+    
+    return requiredFields;
+}
+
+// ============================================================================
+// 4. FUNCTION: Create Records (Formatted for Salesforce Import)
+// ============================================================================
+export function createRecords(targetObject: string, recordList: RecordDefinition[], rootDir: string): string {
+    
+    const objectApiName = `${targetObject}__c`;
+    
+    // 1. Ask the helper: "Which fields MUST be in these records?"
+    const requiredFieldNames = findFields(targetObject, rootDir);
+
+    // 2. Loop through every record to clean it up
+    const formattedRecords = recordList.map((record, index) => {
+        
+        // A: Check for missing required fields and fill with null
+        requiredFieldNames.forEach(reqField => {
+            if (!record.hasOwnProperty(reqField)) {
+                console.log(`⚠️  Warning: Record ${index + 1} missing '${reqField}'. Auto-filling null.`);
+                record[reqField] = null;
+            }
+        });
+
+        // B: Add the mandatory Salesforce "attributes"
+        return {
+            attributes: {
+                type: objectApiName,      // "This is a Property__c"
+                referenceId: `ref${index}` // Unique ID for this batch
+            },
+            ...record // Add the rest of the user's data (Price, Address, etc.)
+        };
+    });
+
+    // 3. Prepare to save the file
+    // We navigate 4 levels up to get to the project root (where package.json is)
+    // scripts -> ts -> [file] ... needs to go up to Project Root
+    const projectRoot = path.resolve(rootDir, '../../../../'); 
+    const dataFolder = path.join(projectRoot, 'data');
+
+    if (!fs.existsSync(dataFolder)) {
+        fs.mkdirSync(dataFolder, { recursive: true });
+    }
+
+    const outputPath = path.join(dataFolder, `${targetObject}-data.json`);
+    
+    // 4. Wrap the list in a "records" object (Salesforce requirement)
+    const finalOutput = { records: formattedRecords };
+    
+    // 5. Write the JSON file
+    fs.writeFileSync(outputPath, JSON.stringify(finalOutput, null, 4));
+    
+    console.log(`✅ Data File Generated: ${outputPath}`);
+    return outputPath; // Return the path so tests can find it
+}
+
+// ============================================================================
+// 5. FUNCTION: Create Object (Standard Scaffolding)
 // ============================================================================
 export function createObject(parentDirectory: string, objectName: string, label: string, pluralLabel: string): string {
-    
-    // 1. Construct the API Name (e.g., "Property" becomes "Property__c")
     const objApiName = `${objectName}__c`;
-
-    // 2. Build the full folder path
-    // path.join combines parts: "force-app/objects" + "Property__c"
     const objectFolder = path.join(parentDirectory, objApiName);
     const fieldsFolder = path.join(objectFolder, 'fields');
 
-    // 3. Create the folders on your hard drive
-    // { recursive: true } means "create the parent folder too if it's missing"
     if (!fs.existsSync(fieldsFolder)) {
         fs.mkdirSync(fieldsFolder, { recursive: true });
     }
 
-    // 4. Define the XML content for the Object
-    // We use 4 spaces for indentation to match Salesforce standards.
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>${objApiName}</fullName>
@@ -68,94 +134,75 @@ export function createObject(parentDirectory: string, objectName: string, label:
     </nameField>
 </CustomObject>`;
 
-    // 5. Write the file to disk
     fs.writeFileSync(path.join(objectFolder, `${objApiName}.object-meta.xml`), xmlContent);
-    console.log(`✅ Created Object: ${objApiName}`);
-    
-    // Return the path to the fields folder so the next function knows where to look
     return fieldsFolder;
 }
 
 // ============================================================================
-// 4. MAIN FUNCTION: Create the Field XMLs
+// 6. FUNCTION: Create Fields
 // ============================================================================
 export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): void {
     
-    // Loop through every field in our list
     fieldList.forEach(field => {
-        
-        // Prepare names
         const apiName = `${field.name}__c`;
-        
-        // Regex magic: Replace ALL underscores ('_') with spaces (' ') for the human-readable label
         const label = field.name.replace(/_/g, ' '); 
-
-        // LOGIC: Add specific XML tags based on the data type
         let extraTags = '';
         
+        // Ternary Operator: If field.required is true, use 'true', otherwise 'false'
+        const isRequired = field.required ? 'true' : 'false';
+
         switch (field.type) {
             case 'Currency':
             case 'Percent':
-                // Money and Percents need decimal places
                 extraTags = '<precision>18</precision>\n    <scale>2</scale>';
                 break;
             case 'Number':
-                // Standard numbers usually have 0 decimals
                 extraTags = '<precision>18</precision>\n    <scale>0</scale>';
                 break;
             case 'Text':
             case 'Email':
             case 'Url':
             case 'Phone':
-                // Text fields need a character limit
                 extraTags = '<length>255</length>';
                 break;
-            // Dates and Checkboxes don't need extra tags, so we do nothing.
         }
 
-        // Build the XML string
         const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>${apiName}</fullName>
     <label>${label}</label>
     <type>${field.type}</type>
     <description>${field.description}</description>
-    <required>false</required>
+    <required>${isRequired}</required>
     ${extraTags}
 </CustomField>`;
 
-        // Write the file
         fs.writeFileSync(path.join(fieldsDir, `${apiName}.field-meta.xml`), xmlContent);
         console.log(`   Created Field: ${apiName}`);
     });
 }
 
 // ============================================================================
-// 5. EXECUTION (The part that actually runs)
+// 7. EXECUTION (Runs when you type 'npm run build')
 // ============================================================================
-// "if (require.main === module)" is a Node.js trick.
-// It means: "Only run this code if I called this file directly from the terminal."
 if (require.main === module) {
-    
-    // PATH FIX: Since this file is now in 'scripts/ts/', we need to go UP two levels
-    // to find 'force-app'.
-    // __dirname = The folder this script is currently inside (scripts/ts)
-    // '../..'   = Go up two levels (to project root)
     const ROOT_DIR = path.resolve(__dirname, '../../force-app/main/default/objects');
 
-    // 1. Create Object
+    // 1. Create Structure
     const fieldsPath = createObject(ROOT_DIR, 'Property', 'Property', 'Properties');
 
     // 2. Define Fields
     const myFields: FieldDefinition[] = [
-        { name: 'Price', type: 'Currency', description: 'The listed sale price' },
-        { name: 'Listing_Date', type: 'Date', description: 'Date went on market' },
-        { name: 'Open_House_Time', type: 'DateTime', description: 'Next event time' },
-        { name: 'Address', type: 'Text', description: 'Street address' },
-        { name: 'Commission_Rate', type: 'Percent', description: 'Agent cut' },
-        { name: 'Zillow_Link', type: 'Url', description: 'External link' }
+        { name: 'Price', type: 'Currency', description: 'The listed sale price of the home', required: true }
     ];
 
-    // 3. Generate Files
     createFields(fieldsPath, myFields);
+
+    // 3. Create Records
+    const myRecords: RecordDefinition[] = [
+        { Name: AmaVilla, 
+          Price__c: 500000}// Missing Address! Should verify auto-null
+    ];
+
+    createRecords('Property', myRecords, ROOT_DIR);
 }
