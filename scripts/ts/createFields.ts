@@ -24,12 +24,11 @@ export interface RecordDefinition {
     [key: string]: any;
 }
 
-// NEW: Configuration for the Object's "Name" field (Text vs AutoNumber)
 export interface NameFieldOptions {
-    label: string;                  // e.g. "Offer Name"
-    type: 'Text' | 'AutoNumber';    // The Data Type
-    displayFormat?: string;         // e.g. "OF-{0000}" (Only for AutoNumber)
-    startingNumber?: number;        // e.g. 1 (Only for AutoNumber)
+    label: string;                  
+    type: 'Text' | 'AutoNumber';    
+    displayFormat?: string;         
+    startingNumber?: number;        
 }
 
 const STANDARD_OBJECTS = ['Account', 'Contact', 'Opportunity', 'Lead', 'Case'];
@@ -77,19 +76,38 @@ export function findFields(targetObject: string, rootDir: string): string[] {
 }
 
 // ============================================================================
-// FUNCTION: Create Records
+// FUNCTION: Create Records (UPDATED with Alert)
 // ============================================================================
-export function createRecords(targetObject: string, recordList: RecordDefinition[], rootDir: string): string {
+export function createRecords(
+    targetObject: string, 
+    recordList: RecordDefinition[], 
+    rootDir: string,
+    nameFieldOptions?: NameFieldOptions // NEW ARGUMENT to check AutoNumber
+): string {
     const { apiName } = getObjectDetails(targetObject);
     const requiredFieldNames = findFields(targetObject, rootDir);
 
+    // ALERT: Check if Name is AutoNumber
+    if (nameFieldOptions && nameFieldOptions.type === 'AutoNumber') {
+        console.log(`ℹ️  Note: Object '${targetObject}' uses AutoNumber. You do not need to provide a 'Name' field.`);
+    }
+
     const formattedRecords = recordList.map((record, index) => {
+        
+        // Safety Check: If user provided 'Name' for an AutoNumber object, warn them.
+        if (nameFieldOptions?.type === 'AutoNumber' && record.hasOwnProperty('Name')) {
+            console.log(`⚠️  Warning: You provided a 'Name' for Record ${index + 1}, but this object is AutoNumber. Salesforce will ignore your value.`);
+            // We delete it so it doesn't cause conflicts
+            delete record['Name']; 
+        }
+
         requiredFieldNames.forEach(reqField => {
             if (!record.hasOwnProperty(reqField)) {
                 console.log(`⚠️  Warning: Record ${index + 1} missing '${reqField}'. Auto-filling null.`);
                 record[reqField] = null;
             }
         });
+        
         return {
             attributes: { type: apiName, referenceId: `ref${index}` },
             ...record
@@ -108,14 +126,14 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
 }
 
 // ============================================================================
-// FUNCTION: Create Object (Updated with AutoNumber Support)
+// FUNCTION: Create Object
 // ============================================================================
 export function createObject(
     parentDirectory: string, 
     objectName: string, 
     label: string, 
     pluralLabel: string,
-    nameFieldOptions?: NameFieldOptions // NEW ARGUMENT (Optional)
+    nameFieldOptions?: NameFieldOptions 
 ): string {
     const { apiName, folderName } = getObjectDetails(objectName);
     const objectFolder = path.join(parentDirectory, folderName);
@@ -123,10 +141,8 @@ export function createObject(
 
     if (!fs.existsSync(fieldsFolder)) fs.mkdirSync(fieldsFolder, { recursive: true });
 
-    // 1. Determine Name Field Logic
     let nameFieldXml = '';
 
-    // Default to simple text if no options provided
     if (!nameFieldOptions) {
         nameFieldXml = `
     <nameField>
@@ -134,7 +150,6 @@ export function createObject(
         <type>Text</type>
     </nameField>`;
     } else {
-        // Handle AutoNumber logic
         if (nameFieldOptions.type === 'AutoNumber') {
             if (!nameFieldOptions.displayFormat) throw new Error("AutoNumber requires a displayFormat (e.g. OF-{0000})");
             
@@ -146,7 +161,6 @@ export function createObject(
         <startingNumber>${nameFieldOptions.startingNumber || 1}</startingNumber>
     </nameField>`;
         } else {
-            // Handle standard Text logic
             nameFieldXml = `
     <nameField>
         <label>${nameFieldOptions.label}</label>
@@ -155,7 +169,6 @@ export function createObject(
         }
     }
 
-    // 2. Build Object XML
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>${apiName}</fullName>

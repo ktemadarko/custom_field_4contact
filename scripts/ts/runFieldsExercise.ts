@@ -5,7 +5,6 @@
 
 import * as path from 'path';
 
-// 1. UPDATED IMPORTS: Added 'NameFieldOptions'
 import { 
     createObject, 
     createFields, 
@@ -28,20 +27,21 @@ if (isRunningDirectly) {
 
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
-    // 1. Create Object (UPDATED)
-    // We now pass a 5th argument to configure the Name field as AutoNumber.
-    // I adapted your "Offer" example to fit the "Property" object (e.g. PROP-0001).
+    // 0. Configuration for Name Field
+    const propertyNameOptions: NameFieldOptions = {
+        label: 'Property Name',       
+        type: 'AutoNumber',           
+        displayFormat: 'PROP-{0000}', 
+        startingNumber: 1             
+    };
+
+    // 1. Create Object
     const fieldsPath = createObject(
         /* parentDirectory */  ROOT_DIR, 
         /* objectName */       'Property', 
         /* label */            'Property', 
         /* pluralLabel */      'Properties',
-        /* nameFieldOptions */ {
-            label: 'Property Name',       // Was "Offer Name"
-            type: 'AutoNumber',           // Was "Auto Number"
-            displayFormat: 'PROP-{0000}', // Was "OF-{0000}"
-            startingNumber: 1             // Was "1"
-        }
+        /* nameFieldOptions */ propertyNameOptions
     );
 
     // 2. Define Fields
@@ -69,7 +69,7 @@ if (isRunningDirectly) {
 
     // 5. Permission Set (DISABLED)
     // import { createPermissionSet } from './createPermissionSet';
-    // createPermissionSet(/* targetObject */ 'Property', /* rootDir */ ROOT_DIR); 
+    // createPermissionSet('Property', ROOT_DIR); 
 
     // 6. Add to Sales App
     addTabToApp(
@@ -78,20 +78,19 @@ if (isRunningDirectly) {
         /* rootDir */      ROOT_DIR
     );
 
-    // 7. Create Data (UPDATED)
-    // Since Name is now AutoNumber, we DO NOT provide it in the record data.
-    // Salesforce will generate "PROP-0001" automatically on import.
+    // 7. Create Data
     const myRecords: RecordDefinition[] = [
         { 
-            // Name: 'Luxury Villa',  <-- REMOVED (Auto-generated now)
             Price__c: 500000 
+            // Name is omitted because we passed AutoNumber options below!
         } 
     ];
 
     createRecords(
-        /* targetObject */ 'Property', 
-        /* recordList */   myRecords, 
-        /* rootDir */      ROOT_DIR
+        /* targetObject */     'Property', 
+        /* recordList */       myRecords, 
+        /* rootDir */          ROOT_DIR,
+        /* nameFieldOptions */ propertyNameOptions // Pass the options here!
     );
     
     console.log('✨ Script Finished Successfully.');
