@@ -1,0 +1,12 @@
+{
+  "records": [
+    {
+      "attributes": {
+        "type": "MyData__c",
+        "referenceId": "ref0"
+      },
+      "Name": "Test",
+      "Mandatory__c": null
+    }
+  ]
+}

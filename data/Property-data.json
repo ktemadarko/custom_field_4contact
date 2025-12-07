@@ -1,0 +1,12 @@
+{
+  "records": [
+    {
+      "attributes": {
+        "type": "Property__c",
+        "referenceId": "ref0"
+      },
+      "Name": "Luxury Villa",
+      "Price__c": 500000
+    }
+  ]
+}
