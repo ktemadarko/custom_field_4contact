@@ -1,7 +1,6 @@
 // ============================================================================
 // 1. IMPORTS
 // ============================================================================
-// We use standard imports. TypeScript will convert these to 'require' for you.
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -33,6 +32,7 @@ function getObjectDetails(objectName: string) {
     let apiName = objectName;
     let folderName = objectName;
 
+    // Logic: Only add __c if it's NOT a standard object and DOESN'T have it yet.
     if (!isStandard && !hasSuffix) {
         apiName = `${objectName}__c`;
         folderName = `${objectName}__c`;
@@ -49,6 +49,7 @@ export function findFields(targetObject: string, rootDir: string): string[] {
     const objectFolder = path.join(rootDir, folderName);
     const fieldsFolder = path.join(objectFolder, 'fields');
 
+    // If folder doesn't exist, we can't search it.
     if (!fs.existsSync(fieldsFolder)) {
         return [];
     }
@@ -56,6 +57,7 @@ export function findFields(targetObject: string, rootDir: string): string[] {
     const files = fs.readdirSync(fieldsFolder);
     const requiredFields: string[] = [];
 
+    // Check each file to see if it is required
     files.forEach(file => {
         const content = fs.readFileSync(path.join(fieldsFolder, file), 'utf8');
         const nameMatch = content.match(/<fullName>(.*?)<\/fullName>/);
@@ -77,6 +79,7 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
     const requiredFieldNames = findFields(targetObject, rootDir);
 
     const formattedRecords = recordList.map((record, index) => {
+        // Auto-fill nulls for missing required fields
         requiredFieldNames.forEach(reqField => {
             if (!record.hasOwnProperty(reqField)) {
                 console.log(`⚠️  Warning: Record ${index + 1} missing '${reqField}'. Auto-filling null.`);
@@ -84,6 +87,7 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
             }
         });
 
+        // Add Salesforce attributes
         return {
             attributes: {
                 type: apiName,
@@ -93,8 +97,10 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
         };
     });
 
-    const projectRoot = path.resolve(rootDir, '../../../../'); 
-    const dataFolder = path.join(projectRoot, 'data');
+    // PATH FIX: Use process.cwd() (Project Root) to find the data folder.
+    // This is safer than using relative paths (../../..) because it works
+    // no matter where the file is located.
+    const dataFolder = path.join(process.cwd(), 'data');
 
     if (!fs.existsSync(dataFolder)) {
         fs.mkdirSync(dataFolder, { recursive: true });
@@ -179,36 +185,35 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
 }
 
 // ============================================================================
-// 8. EXECUTION (Compatible with both ESM and CommonJS)
+// 8. EXECUTION
 // ============================================================================
 
-// We check: "Is the file currently running ending with 'createFields.ts'?"
-// This replaces 'require.main === module' and works everywhere.
+// Check if we are running this file directly.
+// This check (process.argv) works in BOTH CommonJS and ES Modules.
 const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('createFields.ts');
 
 if (isRunningDirectly) {
     
-    // We use __dirname directly. 
-    // Since your error said "build into commonjs", this variable exists natively!
-    const ROOT_DIR = path.resolve(__dirname, '../../force-app/main/default/objects');
+    // ROOT FIX: process.cwd() gets the folder you ran the command from (Project Root).
+    // We append the path to the objects folder.
+    const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
+    // 1. Create Object (Property__c)
     const fieldsPath = createObject(ROOT_DIR, 'Property', 'Property', 'Properties');
 
-    // 2. Define Fields
+    // 2. Define Fields (UPDATED EXAMPLE)
     const myFields: FieldDefinition[] = [
         { name: 'Price', type: 'Currency', description: 'The listed sale price of the home', required: true }
-    
-        
     ];
 
     // 3. Generate XML
     createFields(fieldsPath, myFields);
 
-    // 4. Create Data for Import
+    // 4. Create Data for Import (UPDATED EXAMPLE)
     const myRecords: RecordDefinition[] = [
         { 
             Name: 'Luxury Villa',       // Standard Name field
-            Price__c: 500000
+            Price__c: 500000            // Custom Field
         } 
     ];
 
