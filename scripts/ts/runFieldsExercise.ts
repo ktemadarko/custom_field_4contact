@@ -27,19 +27,11 @@ if (isRunningDirectly) {
 
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
-<<<<<<< HEAD
-    // 0. Configuration for Name Field
-    const offerNameOptions: NameFieldOptions = {
-        label: 'Offer Name',       
-        type: 'AutoNumber',           
-        displayFormat: 'OF-{0000}', 
-=======
     // 0. Configuration for Name Field (AutoNumber)
     const offerNameOptions: NameFieldOptions = {
         label: 'Offer Name',          // UI Label for the ID column
         type: 'AutoNumber',           // Data Type
         displayFormat: 'OF-{0000}',   // Format
->>>>>>> 3cb6e4718303d0b6eab6db4482e898504613f7e3
         startingNumber: 1             
     };
 
@@ -67,7 +59,7 @@ if (isRunningDirectly) {
             label: 'Target Close Date',    // UI Label (Variable nameViewerSees)
             type: 'Date', 
             description: 'Proposed date to close the deal',
-            required: true 
+            required: true
         }
     ];
 
@@ -105,21 +97,12 @@ if (isRunningDirectly) {
         } 
     ];
 
-<<<<<<< HEAD
-    createRecords(
-        /* targetObject */     'Property', 
-        /* recordList */       myRecords, 
-        /* rootDir */          ROOT_DIR,
-        /* nameFieldOptions */ offerNameOptions // Pass the options here!
-    );
-=======
     // createRecords(
     //     /* targetObject */     'Offer', 
     //     /* recordList */       myRecords, 
     //     /* rootDir */          ROOT_DIR,
     //     /* nameFieldOptions */ offerNameOptions
     // );
->>>>>>> 3cb6e4718303d0b6eab6db4482e898504613f7e3
     
     console.log('✨ Script Finished Successfully.');
 }
