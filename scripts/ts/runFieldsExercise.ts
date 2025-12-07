@@ -27,15 +27,23 @@ if (isRunningDirectly) {
 
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
+<<<<<<< HEAD
     // 0. Configuration for Name Field
     const offerNameOptions: NameFieldOptions = {
         label: 'Offer Name',       
         type: 'AutoNumber',           
         displayFormat: 'OF-{0000}', 
+=======
+    // 0. Configuration for Name Field (AutoNumber)
+    const offerNameOptions: NameFieldOptions = {
+        label: 'Offer Name',          // UI Label for the ID column
+        type: 'AutoNumber',           // Data Type
+        displayFormat: 'OF-{0000}',   // Format
+>>>>>>> 3cb6e4718303d0b6eab6db4482e898504613f7e3
         startingNumber: 1             
     };
 
-    // 1. Create Object
+    // 1. Create Object: Offer
     const fieldsPath = createObject(
         /* parentDirectory */  ROOT_DIR, 
         /* objectName */       'Offer', 
@@ -45,11 +53,20 @@ if (isRunningDirectly) {
     );
 
     // 2. Define Fields
+    // We use the new 'label' property to separate API Name from UI Label.
     const myFields: FieldDefinition[] = [
         { 
-            name: 'Price', 
+            name: 'Offer_Amount',          // API Name (becomes Offer_Amount__c)
+            label: 'Offer Amount',         // UI Label (Variable nameViewerSees)
             type: 'Currency', 
-            description: 'Listing Price', 
+            description: 'The monetary value of the offer', 
+            required: true 
+        },
+        { 
+            name: 'Target_Close_Date',     // API Name (becomes Target_Close_Date__c)
+            label: 'Target Close Date',    // UI Label (Variable nameViewerSees)
+            type: 'Date', 
+            description: 'Proposed date to close the deal',
             required: true 
         }
     ];
@@ -62,36 +79,47 @@ if (isRunningDirectly) {
 
     // 4. Create Tab
     createTab(
-        /* targetObject */ 'Property', 
+        /* targetObject */ 'Offer', 
         /* rootDir */      ROOT_DIR, 
-        /* iconStyle */    'Custom13: Building'
+        /* iconStyle */    'Custom1: Heart' // Changed style for variety
     );
 
     // 5. Permission Set (DISABLED)
     // import { createPermissionSet } from './createPermissionSet';
-    // createPermissionSet('Property', ROOT_DIR); 
+    // createPermissionSet('Offer', ROOT_DIR); 
 
     // 6. Add to Sales App
     addTabToApp(
         /* targetApp */    'standard__Sales', 
-        /* targetObject */ 'Property', 
+        /* targetObject */ 'Offer', 
         /* rootDir */      ROOT_DIR
     );
 
-    // 7. Create Data
+    // 7. Create Data (DISABLED)
+    // We define the data structure but DO NOT run the creation function.
     const myRecords: RecordDefinition[] = [
         { 
-            Price__c: 500000 
-            // Name is omitted because we passed AutoNumber options below!
+            // Name is omitted (AutoNumber)
+            Offer_Amount__c: 120000,
+            Target_Close_Date__c: '2023-12-31'
         } 
     ];
 
+<<<<<<< HEAD
     createRecords(
         /* targetObject */     'Property', 
         /* recordList */       myRecords, 
         /* rootDir */          ROOT_DIR,
         /* nameFieldOptions */ offerNameOptions // Pass the options here!
     );
+=======
+    // createRecords(
+    //     /* targetObject */     'Offer', 
+    //     /* recordList */       myRecords, 
+    //     /* rootDir */          ROOT_DIR,
+    //     /* nameFieldOptions */ offerNameOptions
+    // );
+>>>>>>> 3cb6e4718303d0b6eab6db4482e898504613f7e3
     
     console.log('✨ Script Finished Successfully.');
 }

@@ -14,9 +14,10 @@ import * as path from 'path';
 export type FieldType = 'Text' | 'Number' | 'Currency' | 'Checkbox' | 'Date' | 'DateTime' | 'Email' | 'Percent' | 'Phone' | 'Url' | 'TextArea';
 
 export interface FieldDefinition {
-    name: string;
+    name: string;          // API Name (e.g. "Offer_Amount")
+    label?: string;        // NEW: UI Label (e.g. "Offer Amount"). Optional.
     type: FieldType;
-    description: string;
+    description?: string;  // Optional
     required?: boolean;
 }
 
@@ -76,28 +77,25 @@ export function findFields(targetObject: string, rootDir: string): string[] {
 }
 
 // ============================================================================
-// FUNCTION: Create Records (UPDATED with Alert)
+// FUNCTION: Create Records
 // ============================================================================
 export function createRecords(
     targetObject: string, 
     recordList: RecordDefinition[], 
     rootDir: string,
-    nameFieldOptions?: NameFieldOptions // NEW ARGUMENT to check AutoNumber
+    nameFieldOptions?: NameFieldOptions
 ): string {
     const { apiName } = getObjectDetails(targetObject);
     const requiredFieldNames = findFields(targetObject, rootDir);
 
-    // ALERT: Check if Name is AutoNumber
     if (nameFieldOptions && nameFieldOptions.type === 'AutoNumber') {
         console.log(`ℹ️  Note: Object '${targetObject}' uses AutoNumber. You do not need to provide a 'Name' field.`);
     }
 
     const formattedRecords = recordList.map((record, index) => {
         
-        // Safety Check: If user provided 'Name' for an AutoNumber object, warn them.
         if (nameFieldOptions?.type === 'AutoNumber' && record.hasOwnProperty('Name')) {
             console.log(`⚠️  Warning: You provided a 'Name' for Record ${index + 1}, but this object is AutoNumber. Salesforce will ignore your value.`);
-            // We delete it so it doesn't cause conflicts
             delete record['Name']; 
         }
 
@@ -190,12 +188,16 @@ export function createObject(
 }
 
 // ============================================================================
-// FUNCTION: Create Fields
+// FUNCTION: Create Fields (UPDATED)
 // ============================================================================
 export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): void {
     fieldList.forEach(field => {
         const apiName = `${field.name}__c`;
-        const label = field.name.replace(/_/g, ' '); 
+        
+        // NEW LOGIC: Use the user's explicit 'label' if provided.
+        // If not, fall back to replacing underscores (e.g. Offer_Amount -> Offer Amount)
+        const label = field.label ? field.label : field.name.replace(/_/g, ' '); 
+        
         const isRequired = field.required ? 'true' : 'false';
         let extraTags = '';
         
@@ -226,7 +228,7 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
 </CustomField>`;
 
         fs.writeFileSync(path.join(fieldsDir, `${apiName}.field-meta.xml`), xmlContent);
-        console.log(`   Created Field: ${apiName}`);
+        console.log(`   Created Field: ${apiName} (Label: "${label}")`);
     });
 }
 
