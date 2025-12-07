@@ -5,7 +5,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-// We import it, but we won't use it in the execution block below
+// Import permission set logic (optional use)
 import { createPermissionSet } from './createPermissionSet';
 
 // ============================================================================
@@ -24,6 +24,13 @@ export interface RecordDefinition {
     [key: string]: any;
 }
 
+export interface NameFieldOptions {
+    label: string;                  
+    type: 'Text' | 'AutoNumber';    
+    displayFormat?: string;         
+    startingNumber?: number;        
+}
+
 const STANDARD_OBJECTS = ['Account', 'Contact', 'Opportunity', 'Lead', 'Case'];
 
 // ============================================================================
@@ -36,7 +43,6 @@ function getObjectDetails(objectName: string) {
     let apiName = objectName;
     let folderName = objectName;
 
-    // LOGIC CHECK: This ensures 'Property' becomes 'Property__c'
     if (!isStandard && !hasSuffix) {
         apiName = `${objectName}__c`;
         folderName = `${objectName}__c`;
@@ -70,19 +76,38 @@ export function findFields(targetObject: string, rootDir: string): string[] {
 }
 
 // ============================================================================
-// FUNCTION: Create Records
+// FUNCTION: Create Records (UPDATED with Alert)
 // ============================================================================
-export function createRecords(targetObject: string, recordList: RecordDefinition[], rootDir: string): string {
+export function createRecords(
+    targetObject: string, 
+    recordList: RecordDefinition[], 
+    rootDir: string,
+    nameFieldOptions?: NameFieldOptions // NEW ARGUMENT to check AutoNumber
+): string {
     const { apiName } = getObjectDetails(targetObject);
     const requiredFieldNames = findFields(targetObject, rootDir);
 
+    // ALERT: Check if Name is AutoNumber
+    if (nameFieldOptions && nameFieldOptions.type === 'AutoNumber') {
+        console.log(`ℹ️  Note: Object '${targetObject}' uses AutoNumber. You do not need to provide a 'Name' field.`);
+    }
+
     const formattedRecords = recordList.map((record, index) => {
+        
+        // Safety Check: If user provided 'Name' for an AutoNumber object, warn them.
+        if (nameFieldOptions?.type === 'AutoNumber' && record.hasOwnProperty('Name')) {
+            console.log(`⚠️  Warning: You provided a 'Name' for Record ${index + 1}, but this object is AutoNumber. Salesforce will ignore your value.`);
+            // We delete it so it doesn't cause conflicts
+            delete record['Name']; 
+        }
+
         requiredFieldNames.forEach(reqField => {
             if (!record.hasOwnProperty(reqField)) {
                 console.log(`⚠️  Warning: Record ${index + 1} missing '${reqField}'. Auto-filling null.`);
                 record[reqField] = null;
             }
         });
+        
         return {
             attributes: { type: apiName, referenceId: `ref${index}` },
             ...record
@@ -103,12 +128,46 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
 // ============================================================================
 // FUNCTION: Create Object
 // ============================================================================
-export function createObject(parentDirectory: string, objectName: string, label: string, pluralLabel: string): string {
+export function createObject(
+    parentDirectory: string, 
+    objectName: string, 
+    label: string, 
+    pluralLabel: string,
+    nameFieldOptions?: NameFieldOptions 
+): string {
     const { apiName, folderName } = getObjectDetails(objectName);
     const objectFolder = path.join(parentDirectory, folderName);
     const fieldsFolder = path.join(objectFolder, 'fields');
 
     if (!fs.existsSync(fieldsFolder)) fs.mkdirSync(fieldsFolder, { recursive: true });
+
+    let nameFieldXml = '';
+
+    if (!nameFieldOptions) {
+        nameFieldXml = `
+    <nameField>
+        <label>${label} Name</label>
+        <type>Text</type>
+    </nameField>`;
+    } else {
+        if (nameFieldOptions.type === 'AutoNumber') {
+            if (!nameFieldOptions.displayFormat) throw new Error("AutoNumber requires a displayFormat (e.g. OF-{0000})");
+            
+            nameFieldXml = `
+    <nameField>
+        <displayFormat>${nameFieldOptions.displayFormat}</displayFormat>
+        <label>${nameFieldOptions.label}</label>
+        <type>AutoNumber</type>
+        <startingNumber>${nameFieldOptions.startingNumber || 1}</startingNumber>
+    </nameField>`;
+        } else {
+            nameFieldXml = `
+    <nameField>
+        <label>${nameFieldOptions.label}</label>
+        <type>Text</type>
+    </nameField>`;
+        }
+    }
 
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
@@ -123,10 +182,7 @@ export function createObject(parentDirectory: string, objectName: string, label:
     <enableActivities>true</enableActivities>
     <enableReports>true</enableReports>
     <enableSearch>true</enableSearch>
-    <nameField>
-        <label>${label} Name</label>
-        <type>Text</type>
-    </nameField>
+    ${nameFieldXml}
 </CustomObject>`;
 
     fs.writeFileSync(path.join(objectFolder, `${apiName}.object-meta.xml`), xmlContent);
@@ -195,12 +251,10 @@ export function createTab(targetObject: string, rootDir: string, iconStyle: stri
 }
 
 // ============================================================================
-// FUNCTION: Add Tab to App (The Helper)
+// FUNCTION: Add Tab to App
 // ============================================================================
 export function addTabToApp(targetApp: string, targetObject: string, rootDir: string): void {
-    // 1. Resolve Variables (Property -> Property__c)
     const { apiName } = getObjectDetails(targetObject);
-    
     const appFileName = targetApp.endsWith('.app-meta.xml') ? targetApp : `${targetApp}.app-meta.xml`;
     const appsFolder = path.join(rootDir, '..', 'applications');
     const appPath = path.join(appsFolder, appFileName);
@@ -211,8 +265,6 @@ export function addTabToApp(targetApp: string, targetObject: string, rootDir: st
     }
 
     let content = fs.readFileSync(appPath, 'utf8');
-    
-    // 2. Create the tag using the resolved API Name (Property__c)
     const tabTag = `<tabs>${apiName}</tabs>`;
 
     if (content.includes(tabTag)) {

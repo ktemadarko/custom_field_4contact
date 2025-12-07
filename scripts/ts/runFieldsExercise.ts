@@ -5,7 +5,6 @@
 
 import * as path from 'path';
 
-// Import our Custom Tools
 import { 
     createObject, 
     createFields, 
@@ -13,7 +12,8 @@ import {
     addTabToApp, 
     createRecords, 
     FieldDefinition, 
-    RecordDefinition 
+    RecordDefinition,
+    NameFieldOptions 
 } from './createFields';
 
 // ============================================================================
@@ -27,13 +27,21 @@ if (isRunningDirectly) {
 
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
+    // 0. Configuration for Name Field
+    const propertyNameOptions: NameFieldOptions = {
+        label: 'Property Name',       
+        type: 'AutoNumber',           
+        displayFormat: 'PROP-{0000}', 
+        startingNumber: 1             
+    };
+
     // 1. Create Object
-    // We use inline comments /* paramName */ to make it clear what each argument is.
     const fieldsPath = createObject(
-        /* parentDirectory */ ROOT_DIR, 
-        /* objectName */      'Property', 
-        /* label */           'Property', 
-        /* pluralLabel */     'Properties'
+        /* parentDirectory */  ROOT_DIR, 
+        /* objectName */       'Property', 
+        /* label */            'Property', 
+        /* pluralLabel */      'Properties',
+        /* nameFieldOptions */ propertyNameOptions
     );
 
     // 2. Define Fields
@@ -61,7 +69,7 @@ if (isRunningDirectly) {
 
     // 5. Permission Set (DISABLED)
     // import { createPermissionSet } from './createPermissionSet';
-    // createPermissionSet(/* targetObject */ 'Property', /* rootDir */ ROOT_DIR); 
+    // createPermissionSet('Property', ROOT_DIR); 
 
     // 6. Add to Sales App
     addTabToApp(
@@ -72,13 +80,17 @@ if (isRunningDirectly) {
 
     // 7. Create Data
     const myRecords: RecordDefinition[] = [
-        { Name: 'Luxury Villa', Price__c: 500000 } 
+        { 
+            Price__c: 500000 
+            // Name is omitted because we passed AutoNumber options below!
+        } 
     ];
 
     createRecords(
-        /* targetObject */ 'Property', 
-        /* recordList */   myRecords, 
-        /* rootDir */      ROOT_DIR
+        /* targetObject */     'Property', 
+        /* recordList */       myRecords, 
+        /* rootDir */          ROOT_DIR,
+        /* nameFieldOptions */ propertyNameOptions // Pass the options here!
     );
     
     console.log('✨ Script Finished Successfully.');
