@@ -1,11 +1,15 @@
 // ============================================================================
-// 1. IMPORTS
+// FILE: scripts/ts/createFields.ts
+// PURPOSE: Orchestrates Objects, Fields, Tabs, Apps, and Data
 // ============================================================================
 import * as fs from 'fs';
 import * as path from 'path';
 
+// We import it, but we won't use it in the execution block below
+import { createPermissionSet } from './createPermissionSet';
+
 // ============================================================================
-// 2. DEFINITIONS
+// DEFINITIONS
 // ============================================================================
 export type FieldType = 'Text' | 'Number' | 'Currency' | 'Checkbox' | 'Date' | 'DateTime' | 'Email' | 'Percent' | 'Phone' | 'Url' | 'TextArea';
 
@@ -23,7 +27,7 @@ export interface RecordDefinition {
 const STANDARD_OBJECTS = ['Account', 'Contact', 'Opportunity', 'Lead', 'Case'];
 
 // ============================================================================
-// 3. HELPER: Get Correct Names
+// HELPER: Get Correct Names
 // ============================================================================
 function getObjectDetails(objectName: string) {
     const isStandard = STANDARD_OBJECTS.includes(objectName);
@@ -32,26 +36,23 @@ function getObjectDetails(objectName: string) {
     let apiName = objectName;
     let folderName = objectName;
 
-    // Logic: Only add __c if it's NOT a standard object and DOESN'T have it yet.
+    // LOGIC CHECK: This ensures 'Property' becomes 'Property__c'
     if (!isStandard && !hasSuffix) {
         apiName = `${objectName}__c`;
         folderName = `${objectName}__c`;
     }
-
     return { apiName, folderName };
 }
 
 // ============================================================================
-// 4. HELPER: Find Fields
+// HELPER: Find Fields
 // ============================================================================
 export function findFields(targetObject: string, rootDir: string): string[] {
     const { folderName } = getObjectDetails(targetObject);
     const objectFolder = path.join(rootDir, folderName);
     const fieldsFolder = path.join(objectFolder, 'fields');
 
-    if (!fs.existsSync(fieldsFolder)) {
-        return [];
-    }
+    if (!fs.existsSync(fieldsFolder)) return [];
 
     const files = fs.readdirSync(fieldsFolder);
     const requiredFields: string[] = [];
@@ -65,12 +66,11 @@ export function findFields(targetObject: string, rootDir: string): string[] {
             requiredFields.push(nameMatch[1]);
         }
     });
-    
     return requiredFields;
 }
 
 // ============================================================================
-// 5. FUNCTION: Create Records
+// FUNCTION: Create Records
 // ============================================================================
 export function createRecords(targetObject: string, recordList: RecordDefinition[], rootDir: string): string {
     const { apiName } = getObjectDetails(targetObject);
@@ -83,21 +83,14 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
                 record[reqField] = null;
             }
         });
-
         return {
-            attributes: {
-                type: apiName,
-                referenceId: `ref${index}`
-            },
+            attributes: { type: apiName, referenceId: `ref${index}` },
             ...record
         };
     });
 
     const dataFolder = path.join(process.cwd(), 'data');
-
-    if (!fs.existsSync(dataFolder)) {
-        fs.mkdirSync(dataFolder, { recursive: true });
-    }
+    if (!fs.existsSync(dataFolder)) fs.mkdirSync(dataFolder, { recursive: true });
 
     const outputPath = path.join(dataFolder, `${targetObject}-data.json`);
     const finalOutput = { records: formattedRecords };
@@ -108,16 +101,14 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
 }
 
 // ============================================================================
-// 6. FUNCTION: Create Object (Enterprise Features)
+// FUNCTION: Create Object
 // ============================================================================
 export function createObject(parentDirectory: string, objectName: string, label: string, pluralLabel: string): string {
     const { apiName, folderName } = getObjectDetails(objectName);
     const objectFolder = path.join(parentDirectory, folderName);
     const fieldsFolder = path.join(objectFolder, 'fields');
 
-    if (!fs.existsSync(fieldsFolder)) {
-        fs.mkdirSync(fieldsFolder, { recursive: true });
-    }
+    if (!fs.existsSync(fieldsFolder)) fs.mkdirSync(fieldsFolder, { recursive: true });
 
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
@@ -125,12 +116,13 @@ export function createObject(parentDirectory: string, objectName: string, label:
     <label>${label}</label>
     <pluralLabel>${pluralLabel}</pluralLabel>
     <deploymentStatus>Deployed</deploymentStatus>
-    
     <sharingModel>ReadWrite</sharingModel>
     <enableSharing>true</enableSharing>
     <enableBulkApi>true</enableBulkApi>
     <enableStreamingApi>true</enableStreamingApi>
-    
+    <enableActivities>true</enableActivities>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
     <nameField>
         <label>${label} Name</label>
         <type>Text</type>
@@ -142,7 +134,7 @@ export function createObject(parentDirectory: string, objectName: string, label:
 }
 
 // ============================================================================
-// 7. FUNCTION: Create Fields
+// FUNCTION: Create Fields
 // ============================================================================
 export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): void {
     fieldList.forEach(field => {
@@ -183,64 +175,58 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
 }
 
 // ============================================================================
-// 8. FUNCTION: Create Tab (NEW FEATURE)
+// FUNCTION: Create Tab
 // ============================================================================
-// This replaces "Launch New Custom Tab Wizard".
-// It creates a 'tabs' folder and the XML needed to show the object in the UI.
-export function createTab(targetObject: string, rootDir: string): void {
+export function createTab(targetObject: string, rootDir: string, iconStyle: string): void {
     const { apiName } = getObjectDetails(targetObject);
-    
-    // We are currently in '.../objects', so we go up one level to find 'tabs'.
     const tabsFolder = path.join(rootDir, '..', 'tabs');
     
-    if (!fs.existsSync(tabsFolder)) {
-        fs.mkdirSync(tabsFolder, { recursive: true });
-    }
+    if (!fs.existsSync(tabsFolder)) fs.mkdirSync(tabsFolder, { recursive: true });
 
-    // This XML tells Salesforce: "Create a tab for this object using the 'Building' icon."
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
     <customObject>true</customObject>
-    <motif>Custom13: Building</motif>
+    <motif>${iconStyle}</motif>
     <description>Created via automation script</description>
 </CustomTab>`;
 
-    // The filename MUST match the Object API Name (e.g. Property__c.tab-meta.xml)
     fs.writeFileSync(path.join(tabsFolder, `${apiName}.tab-meta.xml`), xmlContent);
     console.log(`✨ Created Tab: ${apiName}`);
 }
 
 // ============================================================================
-// 9. EXECUTION
+// FUNCTION: Add Tab to App (The Helper)
 // ============================================================================
-
-const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('createFields.ts');
-
-if (isRunningDirectly) {
+export function addTabToApp(targetApp: string, targetObject: string, rootDir: string): void {
+    // 1. Resolve Variables (Property -> Property__c)
+    const { apiName } = getObjectDetails(targetObject);
     
-    const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
+    const appFileName = targetApp.endsWith('.app-meta.xml') ? targetApp : `${targetApp}.app-meta.xml`;
+    const appsFolder = path.join(rootDir, '..', 'applications');
+    const appPath = path.join(appsFolder, appFileName);
 
-    // 1. Create Object
-    const fieldsPath = createObject(ROOT_DIR, 'Property', 'Property', 'Properties');
+    if (!fs.existsSync(appPath)) {
+        console.log(`❌ Error: App file ${appPath} not found.`);
+        return;
+    }
 
-    // 2. Define Fields
-    const myFields: FieldDefinition[] = [
-        { name: 'Price', type: 'Currency', description: 'The listed sale price of the home', required: true }
-    ];
+    let content = fs.readFileSync(appPath, 'utf8');
+    
+    // 2. Create the tag using the resolved API Name (Property__c)
+    const tabTag = `<tabs>${apiName}</tabs>`;
 
-    // 3. Generate Fields XML
-    createFields(fieldsPath, myFields);
+    if (content.includes(tabTag)) {
+        console.log(`ℹ️  Tab ${apiName} is already in ${targetApp}`);
+        return;
+    }
 
-    // 4. Create Tab (Translating "Launch Wizard")
-    createTab('Property', ROOT_DIR);
+    if (content.includes('</tabs>')) {
+        const lastTabRegex = /(<tabs>.*?<\/tabs>)(?![\s\S]*<tabs>)/;
+        content = content.replace(lastTabRegex, `$1\n    ${tabTag}`);
+    } else {
+        content = content.replace('</CustomApplication>', `    ${tabTag}\n</CustomApplication>`);
+    }
 
-    // 5. Create Data for Import
-    const myRecords: RecordDefinition[] = [
-        { 
-            Name: 'Luxury Villa',       
-            Price__c: 500000            
-        } 
-    ];
-
-    createRecords('Property', myRecords, ROOT_DIR);
+    fs.writeFileSync(appPath, content);
+    console.log(`✅ Added ${apiName} to App: ${targetApp}`);
 }
