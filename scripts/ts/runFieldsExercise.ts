@@ -5,13 +5,12 @@
 
 import * as path from 'path';
 
-// Custom Tools
+// Import Custom Tools
 import { 
     createObject, 
     createFields, 
     createTab, 
     addTabToApp, 
-    createRecords, 
     FieldDefinition, 
     NameFieldOptions 
 } from './createFields';
@@ -33,7 +32,7 @@ if (isRunningDirectly) {
 
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
-    // 0. Name Config
+    // 1. Configure AutoNumber Name
     const offerNameOptions: NameFieldOptions = {
         label: 'Offer Name',          
         type: 'AutoNumber',           
@@ -41,10 +40,16 @@ if (isRunningDirectly) {
         startingNumber: 1             
     };
 
-    // 1. Create Object
-    const fieldsPath = createObject(ROOT_DIR, 'Offer', 'Offer', 'Offers', offerNameOptions);
+    // 2. Create Object: Offer
+    const fieldsPath = createObject(
+        ROOT_DIR, 
+        'Offer', 
+        'Offer', 
+        'Offers',
+        offerNameOptions
+    );
 
-    // 2. Define Fields
+    // 3. Define Fields (Labels, Description, Required)
     const myFields: FieldDefinition[] = [
         { 
             name: 'Offer_Amount',          
@@ -62,23 +67,21 @@ if (isRunningDirectly) {
         }
     ];
 
-    // 3. Generate Fields
+    // 4. Generate Fields
     createFields(fieldsPath, myFields);
 
-    // 4. Create Tab
+    // 5. Create Tab
     createTab('Offer', ROOT_DIR, 'Custom1: Heart');
 
-    // 5. Create Permission Set (Just the XML file)
+    // 6. Create Permission Set (XML Only)
     createPermissionSet('Offer', ROOT_DIR); 
 
-    // 6. Add to Sales App
+    // 7. Add to Sales App
     addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
 
-    // 7. Update Page Layouts
+    // 8. Update Page Layouts
     addFieldToLayout('Offer-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
     addFieldToLayout('Offer-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
-
-    // REMOVED: Step 8 (Assignment) is now gone from here.
     
     console.log('✨ Script Finished Successfully.');
 }

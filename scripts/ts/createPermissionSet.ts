@@ -10,11 +10,7 @@ function getApiName(objectName: string): string {
     const STANDARD_OBJECTS = ['Account', 'Contact', 'Opportunity', 'Lead', 'Case'];
     const isStandard = STANDARD_OBJECTS.includes(objectName);
     const hasSuffix = objectName.endsWith('__c');
-
-    if (!isStandard && !hasSuffix) {
-        return `${objectName}__c`;
-    }
-    return objectName;
+    return (!isStandard && !hasSuffix) ? `${objectName}__c` : objectName;
 }
 
 export function createPermissionSet(targetObject: string, rootDir: string): void {
