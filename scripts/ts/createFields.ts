@@ -1,10 +1,9 @@
 // ============================================================================
 // 1. IMPORTS
 // ============================================================================
+// We use standard imports. TypeScript will convert these to 'require' for you.
 import * as fs from 'fs';
 import * as path from 'path';
-// NEW: Import 'fileURLToPath' to recreate __dirname functionality
-import { fileURLToPath } from 'url';
 
 // ============================================================================
 // 2. DEFINITIONS
@@ -180,18 +179,17 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
 }
 
 // ============================================================================
-// 8. EXECUTION (ES Module Compatible)
+// 8. EXECUTION (Compatible with both ESM and CommonJS)
 // ============================================================================
 
-// NEW: Recreate __filename and __dirname for ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// We check: "Is the file currently running ending with 'createFields.ts'?"
+// This replaces 'require.main === module' and works everywhere.
+const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('createFields.ts');
 
-// NEW: The ES Module way to check "Am I running directly?"
-// We compare the file path of the current script to the file path Node is executing.
-if (process.argv[1] === __filename) {
+if (isRunningDirectly) {
     
-    // Now __dirname works correctly!
+    // We use __dirname directly. 
+    // Since your error said "build into commonjs", this variable exists natively!
     const ROOT_DIR = path.resolve(__dirname, '../../force-app/main/default/objects');
 
     const fieldsPath = createObject(ROOT_DIR, 'Property', 'Property', 'Properties');

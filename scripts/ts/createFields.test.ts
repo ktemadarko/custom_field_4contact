@@ -2,52 +2,57 @@
 // 1. IMPORTS (Testing Tools)
 // ============================================================================
 
-// Import testing functions from Vitest.
+// Import the specific testing functions we need from Vitest.
+// describe: Groups tests together.
+// test: Defines a single test case.
+// expect: Checks if a value is what we want (e.g., expect(5).toBe(5)).
+// beforeEach: Runs code before every test (good for cleanup).
+// afterAll: Runs code after all tests are done.
 import { describe, test, expect, beforeEach, afterAll } from 'vitest';
 
-// Import file system and path tools.
+// Import 'fs' to check if files exist on the hard drive.
 import * as fs from 'fs';
+
+// Import 'path' to correctly write folder addresses (e.g. folder/file.xml).
 import * as path from 'path';
 
-// Import the URL tool to fix the pathing issue in ES Modules.
-import { fileURLToPath } from 'url';
-
-// Import the functions we wrote in the other file so we can test them.
+// Import the functions we wrote in our main file so we can test them.
 import { createObject, createFields, createRecords, FieldDefinition } from './createFields';
 
 // ============================================================================
 // 2. SETUP (The Sandbox Environment)
 // ============================================================================
 
-// Recreate '__filename' for ES Modules.
-const __filename = fileURLToPath(import.meta.url);
-
-// Recreate '__dirname' for ES Modules.
-const __dirname = path.dirname(__filename);
-
-// Define a temporary folder path for our tests.
+// Define a temporary folder where we will create fake files during testing.
+// __dirname: This variable automatically holds the path to the folder THIS file is in.
 const TEST_ROOT = path.join(__dirname, 'temp_test_output');
 
-// Define a mock (fake) Objects directory inside that temp folder.
+// Define a fake "Objects" folder inside that temp folder to mimic Salesforce.
 const MOCK_OBJECTS_DIR = path.join(TEST_ROOT, 'force-app/main/default/objects');
 
-// Start a Test Suite named "Automation Script Tests".
+// Start a "Test Suite" (a group of related tests).
 describe('Automation Script Tests', () => {
 
-    // This function runs BEFORE every single test case.
+    // ------------------------------------------------------------------------
+    // SETUP: Clean the Slate
+    // ------------------------------------------------------------------------
+    // This runs BEFORE every single test case.
     beforeEach(() => {
-        // Check if the temp folder exists from a previous run.
+        // Check: Does our temp folder exist from a previous run?
         if (fs.existsSync(TEST_ROOT)) {
-            // If yes, delete it completely (clean slate).
+            // If yes, delete it completely so we start fresh.
             fs.rmSync(TEST_ROOT, { recursive: true, force: true });
         }
-        // Create the folder structure anew.
+        // Create the deep folder structure for our mock objects.
         fs.mkdirSync(MOCK_OBJECTS_DIR, { recursive: true });
     });
 
-    // This function runs once AFTER all tests are finished.
+    // ------------------------------------------------------------------------
+    // TEARDOWN: Clean up the Mess
+    // ------------------------------------------------------------------------
+    // This runs once AFTER all tests are finished.
     afterAll(() => {
-        // Clean up the mess we made.
+        // Delete the temp folder so we don't leave junk on your computer.
         if (fs.existsSync(TEST_ROOT)) {
            fs.rmSync(TEST_ROOT, { recursive: true, force: true });
         }
@@ -57,13 +62,14 @@ describe('Automation Script Tests', () => {
     // TEST 1: Custom Object Creation
     // ========================================================================
     test('should create CUSTOM object folder (with __c)', () => {
-        // Run the function to create a "TestObj".
+        // ACT: Run the function to create an object named "TestObj".
         createObject(MOCK_OBJECTS_DIR, 'TestObj', 'Label', 'Plural');
         
-        // Define the path where we expect the file to be.
+        // ASSERT: check if the file was created in the correct place.
+        // It should add '__c' automatically.
         const expectedFile = path.join(MOCK_OBJECTS_DIR, 'TestObj__c', 'TestObj__c.object-meta.xml');
         
-        // Assert: Does the file exist? It should be true.
+        // We expect the file to exist (true).
         expect(fs.existsSync(expectedFile)).toBe(true);
     });
 
@@ -71,18 +77,18 @@ describe('Automation Script Tests', () => {
     // TEST 2: Required Field Logic
     // ========================================================================
     test('should mark field as required in XML', () => {
-        // Setup: Create the object folder first.
+        // SETUP: Create the object folder first.
         const fieldsPath = createObject(MOCK_OBJECTS_DIR, 'TestObj', 'Label', 'Plural');
         
-        // Act: Create a field that has 'required: true'.
+        // ACT: Create a field and explicitly say 'required: true'.
         createFields(fieldsPath, [
             { name: 'MustHave', type: 'Text', description: 'Desc', required: true }
         ]);
 
-        // Read the file that was generated.
+        // READ: Open the file we just built.
         const content = fs.readFileSync(path.join(fieldsPath, 'MustHave__c.field-meta.xml'), 'utf8');
         
-        // Assert: Does the text contain the required tag?
+        // ASSERT: Does the text inside contain the required tag?
         expect(content).toContain('<required>true</required>');
     });
 
@@ -90,18 +96,18 @@ describe('Automation Script Tests', () => {
     // TEST 3: Optional Field Logic
     // ========================================================================
     test('should default to required=false', () => {
-        // Setup: Create the object folder.
+        // SETUP: Create the object folder.
         const fieldsPath = createObject(MOCK_OBJECTS_DIR, 'TestObj', 'Label', 'Plural');
         
-        // Act: Create a field WITHOUT specifying 'required'.
+        // ACT: Create a field WITHOUT mentioning 'required'.
         createFields(fieldsPath, [
             { name: 'Optional', type: 'Text', description: 'Desc' }
         ]);
 
-        // Read the file.
+        // READ: Open the file.
         const content = fs.readFileSync(path.join(fieldsPath, 'Optional__c.field-meta.xml'), 'utf8');
         
-        // Assert: It should default to false.
+        // ASSERT: It should default to false.
         expect(content).toContain('<required>false</required>');
     });
 
@@ -109,30 +115,30 @@ describe('Automation Script Tests', () => {
     // TEST 4: Record Generation (Custom Object)
     // ========================================================================
     test('should generate JSON for Custom Object with attributes', () => {
-        // Setup: Create object and a mandatory field.
+        // SETUP: Create object and a mandatory field.
         const fieldsPath = createObject(MOCK_OBJECTS_DIR, 'MyData', 'Label', 'Plural');
         createFields(fieldsPath, [
             { name: 'Mandatory', type: 'Text', description: 'x', required: true }
         ]);
 
-        // Act: Create a record that is missing that mandatory field.
+        // ACT: Create a record that is MISSING that mandatory field.
         const partialRecord = [{ Name: 'Test' }];
         createRecords('MyData', partialRecord, MOCK_OBJECTS_DIR);
 
-        // Define expected output path.
+        // ASSERT: Check if the JSON file exists.
+        // Note: createRecords goes up 4 levels to find 'data'. 
+        // In our test environment, it puts it in TEST_ROOT/data.
         const expectedDataPath = path.join(TEST_ROOT, 'data', 'MyData-data.json');
-        
-        // Assert: File exists.
         expect(fs.existsSync(expectedDataPath)).toBe(true);
 
-        // Read and parse the JSON.
+        // READ & PARSE: Turn the file content back into a JavaScript object.
         const jsonContent = fs.readFileSync(expectedDataPath, 'utf8');
         const savedData = JSON.parse(jsonContent);
 
-        // Check: Did it add the correct Custom Object type?
+        // CHECK 1: Did it add the correct Custom Object type?
         expect(savedData.records[0].attributes.type).toBe('MyData__c');
         
-        // Check: Did it auto-fill the missing field with null?
+        // CHECK 2: Did it auto-fill the missing field with null?
         expect(savedData.records[0].Mandatory__c).toBe(null);
     });
 
@@ -140,17 +146,15 @@ describe('Automation Script Tests', () => {
     // TEST 5: Record Generation (Standard Object Logic)
     // ========================================================================
     test('should generate JSON for Standard Object (Account) WITHOUT adding __c', () => {
-        // Act: Create a record for 'Account' (a Standard Object).
+        // ACT: Create a record for 'Account' (a known Standard Object).
         const records = [{ Name: 'Acme Corp' }];
         createRecords('Account', records, MOCK_OBJECTS_DIR);
 
-        // Define expected output path.
+        // ASSERT: Check the file path.
         const expectedDataPath = path.join(TEST_ROOT, 'data', 'Account-data.json');
-        
-        // Assert: File exists.
         expect(fs.existsSync(expectedDataPath)).toBe(true);
 
-        // Read and parse the JSON.
+        // READ & PARSE.
         const jsonContent = fs.readFileSync(expectedDataPath, 'utf8');
         const savedData = JSON.parse(jsonContent);
 
