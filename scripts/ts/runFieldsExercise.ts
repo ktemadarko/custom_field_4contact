@@ -52,7 +52,6 @@ if (isRunningDirectly) {
     // 3. Define Fields (Labels, Description, Required)
     const myFields: FieldDefinition[] = [
         { 
-<<<<<<< HEAD
             name: 'Offer_Amount',          // API Name (becomes Offer_Amount__c)
             label: 'Offer Amount',         // UI Label (Variable nameViewerSees)
             type: 'Currency'
@@ -60,15 +59,6 @@ if (isRunningDirectly) {
         { 
             name: 'Target_Close_Date',     // API Name (becomes Target_Close_Date__c)
             label: 'Target Close Date',    // UI Label (Variable nameViewerSees)
-=======
-            name: 'Offer_Amount',          
-            label: 'Offer Amount',         
-            type: 'Currency' 
-        },
-        { 
-            name: 'Target_Close_Date',     
-            label: 'Target Close Date',    
->>>>>>> 63e8db007fc502505b1f6be095ad923a750e9357
             type: 'Date'
         }
     ];
