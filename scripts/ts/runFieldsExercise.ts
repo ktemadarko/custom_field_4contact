@@ -28,20 +28,20 @@ if (isRunningDirectly) {
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
     // 0. Configuration for Name Field
-    const propertyNameOptions: NameFieldOptions = {
-        label: 'Property Name',       
+    const offerNameOptions: NameFieldOptions = {
+        label: 'Offer Name',       
         type: 'AutoNumber',           
-        displayFormat: 'PROP-{0000}', 
+        displayFormat: 'OF-{0000}', 
         startingNumber: 1             
     };
 
     // 1. Create Object
     const fieldsPath = createObject(
         /* parentDirectory */  ROOT_DIR, 
-        /* objectName */       'Property', 
-        /* label */            'Property', 
-        /* pluralLabel */      'Properties',
-        /* nameFieldOptions */ propertyNameOptions
+        /* objectName */       'Offer', 
+        /* label */            'Offer', 
+        /* pluralLabel */      'Offers',
+        /* nameFieldOptions */ offerNameOptions
     );
 
     // 2. Define Fields
@@ -90,7 +90,7 @@ if (isRunningDirectly) {
         /* targetObject */     'Property', 
         /* recordList */       myRecords, 
         /* rootDir */          ROOT_DIR,
-        /* nameFieldOptions */ propertyNameOptions // Pass the options here!
+        /* nameFieldOptions */ offerNameOptions // Pass the options here!
     );
     
     console.log('✨ Script Finished Successfully.');
