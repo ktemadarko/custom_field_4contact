@@ -49,7 +49,6 @@ export function findFields(targetObject: string, rootDir: string): string[] {
     const objectFolder = path.join(rootDir, folderName);
     const fieldsFolder = path.join(objectFolder, 'fields');
 
-    // If folder doesn't exist, we can't search it.
     if (!fs.existsSync(fieldsFolder)) {
         return [];
     }
@@ -57,7 +56,6 @@ export function findFields(targetObject: string, rootDir: string): string[] {
     const files = fs.readdirSync(fieldsFolder);
     const requiredFields: string[] = [];
 
-    // Check each file to see if it is required
     files.forEach(file => {
         const content = fs.readFileSync(path.join(fieldsFolder, file), 'utf8');
         const nameMatch = content.match(/<fullName>(.*?)<\/fullName>/);
@@ -79,7 +77,6 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
     const requiredFieldNames = findFields(targetObject, rootDir);
 
     const formattedRecords = recordList.map((record, index) => {
-        // Auto-fill nulls for missing required fields
         requiredFieldNames.forEach(reqField => {
             if (!record.hasOwnProperty(reqField)) {
                 console.log(`⚠️  Warning: Record ${index + 1} missing '${reqField}'. Auto-filling null.`);
@@ -87,7 +84,6 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
             }
         });
 
-        // Add Salesforce attributes
         return {
             attributes: {
                 type: apiName,
@@ -97,9 +93,6 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
         };
     });
 
-    // PATH FIX: Use process.cwd() (Project Root) to find the data folder.
-    // This is safer than using relative paths (../../..) because it works
-    // no matter where the file is located.
     const dataFolder = path.join(process.cwd(), 'data');
 
     if (!fs.existsSync(dataFolder)) {
@@ -115,7 +108,7 @@ export function createRecords(targetObject: string, recordList: RecordDefinition
 }
 
 // ============================================================================
-// 6. FUNCTION: Create Object
+// 6. FUNCTION: Create Object (Enterprise Features)
 // ============================================================================
 export function createObject(parentDirectory: string, objectName: string, label: string, pluralLabel: string): string {
     const { apiName, folderName } = getObjectDetails(objectName);
@@ -132,7 +125,12 @@ export function createObject(parentDirectory: string, objectName: string, label:
     <label>${label}</label>
     <pluralLabel>${pluralLabel}</pluralLabel>
     <deploymentStatus>Deployed</deploymentStatus>
+    
     <sharingModel>ReadWrite</sharingModel>
+    <enableSharing>true</enableSharing>
+    <enableBulkApi>true</enableBulkApi>
+    <enableStreamingApi>true</enableStreamingApi>
+    
     <nameField>
         <label>${label} Name</label>
         <type>Text</type>
@@ -185,35 +183,62 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
 }
 
 // ============================================================================
-// 8. EXECUTION
+// 8. FUNCTION: Create Tab (NEW FEATURE)
+// ============================================================================
+// This replaces "Launch New Custom Tab Wizard".
+// It creates a 'tabs' folder and the XML needed to show the object in the UI.
+export function createTab(targetObject: string, rootDir: string): void {
+    const { apiName } = getObjectDetails(targetObject);
+    
+    // We are currently in '.../objects', so we go up one level to find 'tabs'.
+    const tabsFolder = path.join(rootDir, '..', 'tabs');
+    
+    if (!fs.existsSync(tabsFolder)) {
+        fs.mkdirSync(tabsFolder, { recursive: true });
+    }
+
+    // This XML tells Salesforce: "Create a tab for this object using the 'Building' icon."
+    const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customObject>true</customObject>
+    <motif>Custom13: Building</motif>
+    <description>Created via automation script</description>
+</CustomTab>`;
+
+    // The filename MUST match the Object API Name (e.g. Property__c.tab-meta.xml)
+    fs.writeFileSync(path.join(tabsFolder, `${apiName}.tab-meta.xml`), xmlContent);
+    console.log(`✨ Created Tab: ${apiName}`);
+}
+
+// ============================================================================
+// 9. EXECUTION
 // ============================================================================
 
-// Check if we are running this file directly.
-// This check (process.argv) works in BOTH CommonJS and ES Modules.
 const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('createFields.ts');
 
 if (isRunningDirectly) {
     
-    // ROOT FIX: process.cwd() gets the folder you ran the command from (Project Root).
-    // We append the path to the objects folder.
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
-    // 1. Create Object (Property__c)
+    // 1. Create Object
     const fieldsPath = createObject(ROOT_DIR, 'Property', 'Property', 'Properties');
 
-    // 2. Define Fields (UPDATED EXAMPLE)
+    // 2. Define Fields
     const myFields: FieldDefinition[] = [
         { name: 'Price', type: 'Currency', description: 'The listed sale price of the home', required: true }
     ];
 
-    // 3. Generate XML
+    // 3. Generate Fields XML
     createFields(fieldsPath, myFields);
 
-    // 4. Create Data for Import (UPDATED EXAMPLE)
+    // 4. Create Tab (Translating "Launch Wizard")
+    createTab('Property', ROOT_DIR);
+
+    // 5. Create Data for Import
     const myRecords: RecordDefinition[] = [
         { 
-            Name: 'Luxury Villa',       // Standard Name field
-            Price__c: 500000            // Custom Field
+            Name: 'Luxury Villa',       
+            Price__c: 500000            
         } 
     ];
 
