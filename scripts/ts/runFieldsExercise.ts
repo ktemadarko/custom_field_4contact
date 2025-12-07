@@ -54,16 +54,12 @@ if (isRunningDirectly) {
         { 
             name: 'Offer_Amount',          
             label: 'Offer Amount',         
-            type: 'Currency', 
-            description: 'The monetary value of the offer', 
-            required: true 
+            type: 'Currency' 
         },
         { 
             name: 'Target_Close_Date',     
             label: 'Target Close Date',    
-            type: 'Date', 
-            description: 'Proposed date to close the deal',
-            required: true
+            type: 'Date'
         }
     ];
 
