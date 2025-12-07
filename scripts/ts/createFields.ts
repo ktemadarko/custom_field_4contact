@@ -1,35 +1,39 @@
 // ============================================================================
 // FILE: scripts/ts/createFields.ts
-// PURPOSE: Orchestrates Objects, Fields, Tabs, Apps, and Data
+// PURPOSE: A library of functions to generate Salesforce metadata XML files.
+//          This file provides the tools for runFieldsExercise.ts.
 // ============================================================================
-import * as fs from 'fs';
-import * as path from 'path';
 
-// Import permission set logic (optional use)
-//import { createPermissionSet } from './createPermissionSet';
+import * as fs from 'fs';   // Tool to read/write files
+import * as path from 'path'; // Tool to manage folder paths
 
 // ============================================================================
-// DEFINITIONS
+// DEFINITIONS (Types & Interfaces)
 // ============================================================================
+
+// List of allowed field types in Salesforce
 export type FieldType = 'Text' | 'Number' | 'Currency' | 'Checkbox' | 'Date' | 'DateTime' | 'Email' | 'Percent' | 'Phone' | 'Url' | 'TextArea';
 
+// Configuration for a single Custom Field
 export interface FieldDefinition {
-    name: string;          // API Name (e.g. "Offer_Amount")
-    label?: string;        // NEW: UI Label (e.g. "Offer Amount"). Optional.
-    type: FieldType;
-    description?: string;  // Optional
-    required?: boolean;
+    name: string;          // API Name (e.g. "Offer_Amount"). Code uses this.
+    label?: string;        // UI Label (e.g. "Offer Amount"). Users see this. Optional.
+    type: FieldType;       // Data Type (Currency, Date, etc.)
+    description?: string;  // Help text for Admins. Optional.
+    required?: boolean;    // Is this field mandatory? Optional.
 }
 
+// Configuration for a Data Record (Row)
 export interface RecordDefinition {
-    [key: string]: any;
+    [key: string]: any;    // Allows any property name (e.g. Price__c: 500)
 }
 
+// Configuration for the Object's "Name" Field (Column A)
 export interface NameFieldOptions {
-    label: string;                  
-    type: 'Text' | 'AutoNumber';    
-    displayFormat?: string;         
-    startingNumber?: number;        
+    label: string;                  // e.g. "Offer Name" or "Offer ID"
+    type: 'Text' | 'AutoNumber';    // Manual Text or Automatic ID
+    displayFormat?: string;         // Required for AutoNumber (e.g. "OF-{0000}")
+    startingNumber?: number;        // Required for AutoNumber (e.g. 1)
 }
 
 const STANDARD_OBJECTS = ['Account', 'Contact', 'Opportunity', 'Lead', 'Case'];
@@ -37,6 +41,7 @@ const STANDARD_OBJECTS = ['Account', 'Contact', 'Opportunity', 'Lead', 'Case'];
 // ============================================================================
 // HELPER: Get Correct Names
 // ============================================================================
+// Determines if we need to add '__c' to the object name.
 function getObjectDetails(objectName: string) {
     const isStandard = STANDARD_OBJECTS.includes(objectName);
     const hasSuffix = objectName.endsWith('__c');
@@ -44,6 +49,7 @@ function getObjectDetails(objectName: string) {
     let apiName = objectName;
     let folderName = objectName;
 
+    // Rule: If it's NOT standard (like Account) and doesn't have suffix, add '__c'.
     if (!isStandard && !hasSuffix) {
         apiName = `${objectName}__c`;
         folderName = `${objectName}__c`;
@@ -54,6 +60,7 @@ function getObjectDetails(objectName: string) {
 // ============================================================================
 // HELPER: Find Fields
 // ============================================================================
+// Scans the folder to see which fields are marked as <required>true</required>.
 export function findFields(targetObject: string, rootDir: string): string[] {
     const { folderName } = getObjectDetails(targetObject);
     const objectFolder = path.join(rootDir, folderName);
@@ -66,6 +73,7 @@ export function findFields(targetObject: string, rootDir: string): string[] {
 
     files.forEach(file => {
         const content = fs.readFileSync(path.join(fieldsFolder, file), 'utf8');
+        // Regex: Extract the API name between <fullName> tags
         const nameMatch = content.match(/<fullName>(.*?)<\/fullName>/);
         const isRequired = content.includes('<required>true</required>');
 
@@ -77,28 +85,31 @@ export function findFields(targetObject: string, rootDir: string): string[] {
 }
 
 // ============================================================================
-// FUNCTION: Create Records
+// FUNCTION: Create Records (Data JSON)
 // ============================================================================
 export function createRecords(
     targetObject: string, 
     recordList: RecordDefinition[], 
     rootDir: string,
-    nameFieldOptions?: NameFieldOptions
+    nameFieldOptions?: NameFieldOptions // Check if Name is AutoNumber
 ): string {
     const { apiName } = getObjectDetails(targetObject);
     const requiredFieldNames = findFields(targetObject, rootDir);
 
+    // Alert user if object is AutoNumber
     if (nameFieldOptions && nameFieldOptions.type === 'AutoNumber') {
         console.log(`ℹ️  Note: Object '${targetObject}' uses AutoNumber. You do not need to provide a 'Name' field.`);
     }
 
     const formattedRecords = recordList.map((record, index) => {
         
+        // Warning: Don't provide 'Name' for AutoNumber objects
         if (nameFieldOptions?.type === 'AutoNumber' && record.hasOwnProperty('Name')) {
-            console.log(`⚠️  Warning: You provided a 'Name' for Record ${index + 1}, but this object is AutoNumber. Salesforce will ignore your value.`);
+            console.log(`⚠️  Warning: Record ${index + 1} has a 'Name' value, but object is AutoNumber. Ignoring.`);
             delete record['Name']; 
         }
 
+        // Auto-fill missing required fields with null
         requiredFieldNames.forEach(reqField => {
             if (!record.hasOwnProperty(reqField)) {
                 console.log(`⚠️  Warning: Record ${index + 1} missing '${reqField}'. Auto-filling null.`);
@@ -106,12 +117,14 @@ export function createRecords(
             }
         });
         
+        // Add Attributes tag (Salesforce Requirement)
         return {
             attributes: { type: apiName, referenceId: `ref${index}` },
             ...record
         };
     });
 
+    // Write file to 'data' folder in project root
     const dataFolder = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataFolder)) fs.mkdirSync(dataFolder, { recursive: true });
 
@@ -124,7 +137,7 @@ export function createRecords(
 }
 
 // ============================================================================
-// FUNCTION: Create Object
+// FUNCTION: Create Object (Structure XML)
 // ============================================================================
 export function createObject(
     parentDirectory: string, 
@@ -137,18 +150,17 @@ export function createObject(
     const objectFolder = path.join(parentDirectory, folderName);
     const fieldsFolder = path.join(objectFolder, 'fields');
 
+    // Create folders
     if (!fs.existsSync(fieldsFolder)) fs.mkdirSync(fieldsFolder, { recursive: true });
 
+    // Generate XML for the "Name" field (Column A)
     let nameFieldXml = '';
-
     if (!nameFieldOptions) {
-        nameFieldXml = `
-    <nameField>
-        <label>${label} Name</label>
-        <type>Text</type>
-    </nameField>`;
+        // Default: Standard Text Name
+        nameFieldXml = `<nameField><label>${label} Name</label><type>Text</type></nameField>`;
     } else {
         if (nameFieldOptions.type === 'AutoNumber') {
+            // AutoNumber Configuration
             if (!nameFieldOptions.displayFormat) throw new Error("AutoNumber requires a displayFormat (e.g. OF-{0000})");
             
             nameFieldXml = `
@@ -159,14 +171,12 @@ export function createObject(
         <startingNumber>${nameFieldOptions.startingNumber || 1}</startingNumber>
     </nameField>`;
         } else {
-            nameFieldXml = `
-    <nameField>
-        <label>${nameFieldOptions.label}</label>
-        <type>Text</type>
-    </nameField>`;
+            // Explicit Text Configuration
+            nameFieldXml = `<nameField><label>${nameFieldOptions.label}</label><type>Text</type></nameField>`;
         }
     }
 
+    // Build Object XML with Enterprise Features enabled
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>${apiName}</fullName>
@@ -188,19 +198,20 @@ export function createObject(
 }
 
 // ============================================================================
-// FUNCTION: Create Fields (UPDATED)
+// FUNCTION: Create Fields (Column XMLs)
 // ============================================================================
 export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): void {
     fieldList.forEach(field => {
         const apiName = `${field.name}__c`;
         
-        // NEW LOGIC: Use the user's explicit 'label' if provided.
-        // If not, fall back to replacing underscores (e.g. Offer_Amount -> Offer Amount)
+        // Logic: Use user label if provided, otherwise prettify the API Name
         const label = field.label ? field.label : field.name.replace(/_/g, ' '); 
-        
         const isRequired = field.required ? 'true' : 'false';
-        let extraTags = '';
         
+        // Logic: Use description if provided, otherwise empty
+        const descriptionTag = field.description ? `<description>${field.description}</description>` : '';
+
+        let extraTags = '';
         switch (field.type) {
             case 'Currency':
             case 'Percent':
@@ -222,7 +233,7 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
     <fullName>${apiName}</fullName>
     <label>${label}</label>
     <type>${field.type}</type>
-    <description>${field.description}</description>
+    ${descriptionTag}
     <required>${isRequired}</required>
     ${extraTags}
 </CustomField>`;
@@ -233,12 +244,11 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
 }
 
 // ============================================================================
-// FUNCTION: Create Tab
+// FUNCTION: Create Tab (UI Icon)
 // ============================================================================
 export function createTab(targetObject: string, rootDir: string, iconStyle: string): void {
     const { apiName } = getObjectDetails(targetObject);
     const tabsFolder = path.join(rootDir, '..', 'tabs');
-    
     if (!fs.existsSync(tabsFolder)) fs.mkdirSync(tabsFolder, { recursive: true });
 
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
@@ -253,7 +263,7 @@ export function createTab(targetObject: string, rootDir: string, iconStyle: stri
 }
 
 // ============================================================================
-// FUNCTION: Add Tab to App
+// FUNCTION: Add Tab to App (The Helper)
 // ============================================================================
 export function addTabToApp(targetApp: string, targetObject: string, rootDir: string): void {
     const { apiName } = getObjectDetails(targetObject);
@@ -268,12 +278,14 @@ export function addTabToApp(targetApp: string, targetObject: string, rootDir: st
 
     let content = fs.readFileSync(appPath, 'utf8');
     const tabTag = `<tabs>${apiName}</tabs>`;
-
+    
+    // Check duplication
     if (content.includes(tabTag)) {
         console.log(`ℹ️  Tab ${apiName} is already in ${targetApp}`);
         return;
     }
 
+    // Insert logic
     if (content.includes('</tabs>')) {
         const lastTabRegex = /(<tabs>.*?<\/tabs>)(?![\s\S]*<tabs>)/;
         content = content.replace(lastTabRegex, `$1\n    ${tabTag}`);

@@ -5,16 +5,21 @@
 
 import * as path from 'path';
 
+// Import Custom Tools
 import { 
     createObject, 
     createFields, 
     createTab, 
     addTabToApp, 
-    createRecords, 
     FieldDefinition, 
-    RecordDefinition,
     NameFieldOptions 
 } from './createFields';
+
+// Permission Set Generator
+import { createPermissionSet } from './createPermissionSet';
+
+// Layout Helper
+import { addFieldToLayout } from './updateLayouts';
 
 // ============================================================================
 // EXECUTION
@@ -27,27 +32,27 @@ if (isRunningDirectly) {
 
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
-    // 0. Configuration for Name Field (AutoNumber)
+    // 1. Configure AutoNumber Name
     const offerNameOptions: NameFieldOptions = {
-        label: 'Offer Name',          // UI Label for the ID column
-        type: 'AutoNumber',           // Data Type
-        displayFormat: 'OF-{0000}',   // Format
+        label: 'Offer Name',          
+        type: 'AutoNumber',           
+        displayFormat: 'OF-{0000}',   
         startingNumber: 1             
     };
 
-    // 1. Create Object: Offer
+    // 2. Create Object: Offer
     const fieldsPath = createObject(
-        /* parentDirectory */  ROOT_DIR, 
-        /* objectName */       'Offer', 
-        /* label */            'Offer', 
-        /* pluralLabel */      'Offers',
-        /* nameFieldOptions */ offerNameOptions
+        ROOT_DIR, 
+        'Offer', 
+        'Offer', 
+        'Offers',
+        offerNameOptions
     );
 
-    // 2. Define Fields
-    // We use the new 'label' property to separate API Name from UI Label.
+    // 3. Define Fields (Labels, Description, Required)
     const myFields: FieldDefinition[] = [
         { 
+<<<<<<< HEAD
             name: 'Offer_Amount',          // API Name (becomes Offer_Amount__c)
             label: 'Offer Amount',         // UI Label (Variable nameViewerSees)
             type: 'Currency'
@@ -55,50 +60,34 @@ if (isRunningDirectly) {
         { 
             name: 'Target_Close_Date',     // API Name (becomes Target_Close_Date__c)
             label: 'Target Close Date',    // UI Label (Variable nameViewerSees)
+=======
+            name: 'Offer_Amount',          
+            label: 'Offer Amount',         
+            type: 'Currency' 
+        },
+        { 
+            name: 'Target_Close_Date',     
+            label: 'Target Close Date',    
+>>>>>>> 63e8db007fc502505b1f6be095ad923a750e9357
             type: 'Date'
         }
     ];
 
-    // 3. Generate Fields
-    createFields(
-        /* fieldsDir */ fieldsPath, 
-        /* fieldList */ myFields
-    );
+    // 4. Generate Fields
+    createFields(fieldsPath, myFields);
 
-    // 4. Create Tab
-    createTab(
-        /* targetObject */ 'Offer', 
-        /* rootDir */      ROOT_DIR, 
-        /* iconStyle */    'Custom1: Heart' // Changed style for variety
-    );
+    // 5. Create Tab
+    createTab('Offer', ROOT_DIR, 'Custom1: Heart');
 
-    // 5. Permission Set (DISABLED)
-    // import { createPermissionSet } from './createPermissionSet';
-    // createPermissionSet('Offer', ROOT_DIR); 
+    // 6. Create Permission Set (XML Only)
+    createPermissionSet('Offer', ROOT_DIR); 
 
-    // 6. Add to Sales App
-    addTabToApp(
-        /* targetApp */    'standard__Sales', 
-        /* targetObject */ 'Offer', 
-        /* rootDir */      ROOT_DIR
-    );
+    // 7. Add to Sales App
+    addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
 
-    // 7. Create Data (DISABLED)
-    // We define the data structure but DO NOT run the creation function.
-    const myRecords: RecordDefinition[] = [
-        { 
-            // Name is omitted (AutoNumber)
-            Offer_Amount__c: 120000,
-            Target_Close_Date__c: '2023-12-31'
-        } 
-    ];
-
-    // createRecords(
-    //     /* targetObject */     'Offer', 
-    //     /* recordList */       myRecords, 
-    //     /* rootDir */          ROOT_DIR,
-    //     /* nameFieldOptions */ offerNameOptions
-    // );
+    // 8. Update Page Layouts
+    addFieldToLayout('Offer-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
+    addFieldToLayout('Offer-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
     
     console.log('✨ Script Finished Successfully.');
 }
