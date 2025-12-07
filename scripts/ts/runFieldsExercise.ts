@@ -5,7 +5,7 @@
 
 import * as path from 'path';
 
-// Import our Custom Tools
+// 1. UPDATED IMPORTS: Added 'NameFieldOptions'
 import { 
     createObject, 
     createFields, 
@@ -13,7 +13,8 @@ import {
     addTabToApp, 
     createRecords, 
     FieldDefinition, 
-    RecordDefinition 
+    RecordDefinition,
+    NameFieldOptions 
 } from './createFields';
 
 // ============================================================================
@@ -27,13 +28,20 @@ if (isRunningDirectly) {
 
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
-    // 1. Create Object
-    // We use inline comments /* paramName */ to make it clear what each argument is.
+    // 1. Create Object (UPDATED)
+    // We now pass a 5th argument to configure the Name field as AutoNumber.
+    // I adapted your "Offer" example to fit the "Property" object (e.g. PROP-0001).
     const fieldsPath = createObject(
-        /* parentDirectory */ ROOT_DIR, 
-        /* objectName */      'Property', 
-        /* label */           'Property', 
-        /* pluralLabel */     'Properties'
+        /* parentDirectory */  ROOT_DIR, 
+        /* objectName */       'Property', 
+        /* label */            'Property', 
+        /* pluralLabel */      'Properties',
+        /* nameFieldOptions */ {
+            label: 'Property Name',       // Was "Offer Name"
+            type: 'AutoNumber',           // Was "Auto Number"
+            displayFormat: 'PROP-{0000}', // Was "OF-{0000}"
+            startingNumber: 1             // Was "1"
+        }
     );
 
     // 2. Define Fields
@@ -70,9 +78,14 @@ if (isRunningDirectly) {
         /* rootDir */      ROOT_DIR
     );
 
-    // 7. Create Data
+    // 7. Create Data (UPDATED)
+    // Since Name is now AutoNumber, we DO NOT provide it in the record data.
+    // Salesforce will generate "PROP-0001" automatically on import.
     const myRecords: RecordDefinition[] = [
-        { Name: 'Luxury Villa', Price__c: 500000 } 
+        { 
+            // Name: 'Luxury Villa',  <-- REMOVED (Auto-generated now)
+            Price__c: 500000 
+        } 
     ];
 
     createRecords(
