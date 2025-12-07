@@ -235,13 +235,20 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
 }
 
 // ============================================================================
-// 8. EXECUTION (Runs when 'npm run build' is called)
+// 8. EXECUTION (ES Module Compatible (Runs when 'npm run build' is called)
 // ============================================================================
-if (require.main === module) {
-    // Determine the root Objects folder dynamically
+
+// NEW: Recreate __filename and __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// NEW: The ES Module way to check "Am I running directly?"
+// We compare the file path of the current script to the file path Node is executing.
+if (process.argv[1] === __filename) {
+    
+    // Now __dirname works correctly!
     const ROOT_DIR = path.resolve(__dirname, '../../force-app/main/default/objects');
 
-    // 1. Create Object (Property__c)
     const fieldsPath = createObject(ROOT_DIR, 'Property', 'Property', 'Properties');
 
     // 2. Define Fields
