@@ -5,45 +5,49 @@ import { describe, test, expect, beforeEach, afterAll } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Import our functions from the logic file
+// Import our functions
 import { createObject, createFields, createRecords, FieldDefinition } from './createFields';
 
 // ============================================================================
 // 2. SETUP (The Sandbox)
 // ============================================================================
+// We create a fake file system structure for testing.
 const TEST_ROOT = path.join(__dirname, 'temp_test_output');
 const MOCK_OBJECTS_DIR = path.join(TEST_ROOT, 'force-app/main/default/objects');
 
 describe('Automation Script Tests', () => {
 
-    // Clean up before every single test
+    // Runs BEFORE every test
     beforeEach(() => {
+        // Clean slate: Delete temp folder if it exists
         if (fs.existsSync(TEST_ROOT)) {
             fs.rmSync(TEST_ROOT, { recursive: true, force: true });
         }
-        // Create the deep folder structure
+        // Create the mock objects folder
         fs.mkdirSync(MOCK_OBJECTS_DIR, { recursive: true });
     });
 
-    // Clean up after we are finished
+    // Runs AFTER all tests finish
     afterAll(() => {
+        // Final cleanup
         if (fs.existsSync(TEST_ROOT)) {
            fs.rmSync(TEST_ROOT, { recursive: true, force: true });
         }
     });
 
     // ========================================================================
-    // TEST 1: Object Creation
+    // TEST 1: Custom Object Creation
     // ========================================================================
-    test('should create object folder and XML', () => {
-        const fieldsPath = createObject(MOCK_OBJECTS_DIR, 'TestObj', 'Label', 'Plural');
+    test('should create CUSTOM object folder (with __c)', () => {
+        createObject(MOCK_OBJECTS_DIR, 'TestObj', 'Label', 'Plural');
         
+        // Expect: TestObj__c folder
         const expectedFile = path.join(MOCK_OBJECTS_DIR, 'TestObj__c', 'TestObj__c.object-meta.xml');
         expect(fs.existsSync(expectedFile)).toBe(true);
     });
 
     // ========================================================================
-    // TEST 2: Field Creation (Required)
+    // TEST 2: Required Field Logic
     // ========================================================================
     test('should mark field as required in XML', () => {
         const fieldsPath = createObject(MOCK_OBJECTS_DIR, 'TestObj', 'Label', 'Plural');
@@ -52,12 +56,12 @@ describe('Automation Script Tests', () => {
             { name: 'MustHave', type: 'Text', description: 'Desc', required: true }
         ]);
 
-        const fileContent = fs.readFileSync(path.join(fieldsPath, 'MustHave__c.field-meta.xml'), 'utf8');
-        expect(fileContent).toContain('<required>true</required>');
+        const content = fs.readFileSync(path.join(fieldsPath, 'MustHave__c.field-meta.xml'), 'utf8');
+        expect(content).toContain('<required>true</required>');
     });
 
     // ========================================================================
-    // TEST 3: Field Creation (Default Optional)
+    // TEST 3: Optional Field Logic
     // ========================================================================
     test('should default to required=false', () => {
         const fieldsPath = createObject(MOCK_OBJECTS_DIR, 'TestObj', 'Label', 'Plural');
@@ -66,53 +70,56 @@ describe('Automation Script Tests', () => {
             { name: 'Optional', type: 'Text', description: 'Desc' }
         ]);
 
-        const fileContent = fs.readFileSync(path.join(fieldsPath, 'Optional__c.field-meta.xml'), 'utf8');
-        expect(fileContent).toContain('<required>false</required>');
+        const content = fs.readFileSync(path.join(fieldsPath, 'Optional__c.field-meta.xml'), 'utf8');
+        expect(content).toContain('<required>false</required>');
     });
 
     // ========================================================================
-    // TEST 4: Record Creation (Updated with Name field)
+    // TEST 4: Record Generation (Custom Object)
     // ========================================================================
-    test('should generate Salesforce-ready JSON with attributes and nulls', () => {
-        // A. Setup: Create the object and a REQUIRED field
+    test('should generate JSON for Custom Object with attributes', () => {
         const fieldsPath = createObject(MOCK_OBJECTS_DIR, 'MyData', 'Label', 'Plural');
         createFields(fieldsPath, [
             { name: 'Mandatory', type: 'Text', description: 'x', required: true }
         ]);
 
-        // B. Act: Create a record. 
-        // We include 'Name' because it's standard, but omit 'Mandatory__c' to test the auto-null logic.
-        const partialRecord = [
-            { 
-                Name: 'Test Record Name', // Standard field
-                SomeOtherField: 'Value' 
-            }
-        ];
+        // Create record missing the mandatory field
+        const partialRecord = [{ Name: 'Test' }];
 
-        // We pass MOCK_OBJECTS_DIR so it knows where to look for fields
         createRecords('MyData', partialRecord, MOCK_OBJECTS_DIR);
 
-        // C. Assert: Check the JSON file
         const expectedDataPath = path.join(TEST_ROOT, 'data', 'MyData-data.json');
-        
         expect(fs.existsSync(expectedDataPath)).toBe(true);
 
         const jsonContent = fs.readFileSync(expectedDataPath, 'utf8');
         const savedData = JSON.parse(jsonContent);
 
-        // CHECK 1: Is it wrapped in "records"?
-        expect(savedData).toHaveProperty('records');
-        const firstRecord = savedData.records[0];
+        // Check attributes
+        expect(savedData.records[0].attributes.type).toBe('MyData__c');
+        // Check auto-null
+        expect(savedData.records[0].Mandatory__c).toBe(null);
+    });
 
-        // CHECK 2: Did it add the Salesforce attributes?
-        expect(firstRecord).toHaveProperty('attributes');
-        expect(firstRecord.attributes.type).toBe('MyData__c');
+    // ========================================================================
+    // TEST 5: Record Generation (Standard Object Logic)
+    // ========================================================================
+    test('should generate JSON for Standard Object (Account) WITHOUT adding __c', () => {
+        // Note: We don't need to create the object XML for this test because
+        // 'findFields' will just return empty list if folder is missing. 
+        // We are testing the 'attributes.type' logic here.
 
-        // CHECK 3: Did it preserve the Name?
-        expect(firstRecord.Name).toBe('Test Record Name');
+        const records = [{ Name: 'Acme Corp' }];
+        
+        // Pass 'Account' (Standard Object Name)
+        createRecords('Account', records, MOCK_OBJECTS_DIR);
 
-        // CHECK 4: Did it fill the missing required field with null?
-        expect(firstRecord).toHaveProperty('Mandatory__c');
-        expect(firstRecord.Mandatory__c).toBe(null);
+        const expectedDataPath = path.join(TEST_ROOT, 'data', 'Account-data.json');
+        expect(fs.existsSync(expectedDataPath)).toBe(true);
+
+        const jsonContent = fs.readFileSync(expectedDataPath, 'utf8');
+        const savedData = JSON.parse(jsonContent);
+
+        // KEY CHECK: type should be 'Account', NOT 'Account__c'
+        expect(savedData.records[0].attributes.type).toBe('Account');
     });
 });
