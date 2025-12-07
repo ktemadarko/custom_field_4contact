@@ -5,6 +5,7 @@
   "description": "Salesforce App",
   "scripts": {
     "build": "ts-node scripts/ts/runFieldsExercise.ts",
+    "assign-perm": "ts-node scripts/ts/assignPermission.ts",
     "lint": "eslint **/{aura,lwc}/**/*.js",
     "test": "npm run test:unit && npm run test:scripts",
     "test:unit": "sfdx-lwc-jest",
