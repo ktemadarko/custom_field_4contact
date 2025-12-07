@@ -50,16 +50,12 @@ if (isRunningDirectly) {
         { 
             name: 'Offer_Amount',          // API Name (becomes Offer_Amount__c)
             label: 'Offer Amount',         // UI Label (Variable nameViewerSees)
-            type: 'Currency', 
-            description: 'The monetary value of the offer', 
-            required: true 
+            type: 'Currency'
         },
         { 
             name: 'Target_Close_Date',     // API Name (becomes Target_Close_Date__c)
             label: 'Target Close Date',    // UI Label (Variable nameViewerSees)
-            type: 'Date', 
-            description: 'Proposed date to close the deal',
-            required: true
+            type: 'Date'
         }
     ];
 
