@@ -263,3 +263,4 @@ if (require.main === module) {
     ];
 
     createRecords('Property', myRecords, ROOT_DIR);
+}
