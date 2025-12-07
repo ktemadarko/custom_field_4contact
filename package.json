@@ -16,6 +16,7 @@
     "prettier": "prettier --write \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
     "prettier:verify": "prettier --check \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
     "deploy": "npm run build && npm run format && sf project deploy start",
+    "import-data": "sf data import tree --files data/Property-data.json --target-org my_dev_org",
     "prepare": "husky || true",
     "precommit": "lint-staged"
   },
