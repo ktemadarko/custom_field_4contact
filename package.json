@@ -1,5 +1,5 @@
 {
-  "na e": "salesforce-app",
+  "name": "salesforce-app",
   "private": true,
   "version": "1.0.0",
   "description": "Salesforce App",
