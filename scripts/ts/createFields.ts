@@ -443,8 +443,8 @@ if (isRunningDirectly) {
     addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
 
     // 8. Update Page Layouts
-    addFieldToLayout('Offer-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
-    addFieldToLayout('Offer-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
+    //addFieldToLayout('Offer-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
+    //addFieldToLayout('Offer-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
     
     console.log('✨ Script Finished Successfully.');
 }
