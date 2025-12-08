@@ -1,11 +1,12 @@
 // ============================================================================
 // FILE: scripts/ts/createFields.ts
 // PURPOSE: A library of functions to generate Salesforce metadata XML files.
-//          This file provides the tools for runFieldsExercise.ts.
 // ============================================================================
 
-import * as fs from 'fs';   // Tool to read/write files
-import * as path from 'path'; // Tool to manage folder paths
+// Import 'fs' to let us Read and Write files on your computer.
+import * as fs from 'fs';
+// Import 'path' to correctly create file addresses (like C:\Users\...)
+import * as path from 'path';
 
 // ============================================================================
 // DEFINITIONS (Types & Interfaces)
@@ -23,12 +24,13 @@ export interface FieldDefinition {
     required?: boolean;    // Is this field mandatory? Optional.
 }
 
-// Configuration for a Data Record (Row)
+// Configuration for a Data Record (Row) 
+// A Record is just a list of key-value pairs (like Name: "Villa").
 export interface RecordDefinition {
     [key: string]: any;    // Allows any property name (e.g. Price__c: 500)
 }
 
-// Configuration for the Object's "Name" Field (Column A)
+// Rule: Configuration for the Object's main "Name" column (Text vs AutoNumber).
 export interface NameFieldOptions {
     label: string;                  // e.g. "Offer Name" or "Offer ID"
     type: 'Text' | 'AutoNumber';    // Manual Text or Automatic ID
@@ -36,24 +38,28 @@ export interface NameFieldOptions {
     startingNumber?: number;        // Required for AutoNumber (e.g. 1)
 }
 
+// A list of Standard Objects (like Account) that don't need the '__c' suffix.
 const STANDARD_OBJECTS = ['Account', 'Contact', 'Opportunity', 'Lead', 'Case'];
 
 // ============================================================================
 // HELPER: Get Correct Names
 // ============================================================================
-// Determines if we need to add '__c' to the object name.
+// This function figures out if we need to add '__c' to the end of a name.
 function getObjectDetails(objectName: string) {
+    // Check if the name is in our Standard Objects list.
     const isStandard = STANDARD_OBJECTS.includes(objectName);
+    // Check if the user already typed '__c'.
     const hasSuffix = objectName.endsWith('__c');
 
     let apiName = objectName;
     let folderName = objectName;
 
-    // Rule: If it's NOT standard (like Account) and doesn't have suffix, add '__c'.
+    // Logic: If it's NOT standard (like Account) and doesn't have suffix, add '__c'.
     if (!isStandard && !hasSuffix) {
         apiName = `${objectName}__c`;
         folderName = `${objectName}__c`;
     }
+    // Return the cleaned-up names.
     return { apiName, folderName };
 }
 
@@ -62,15 +68,19 @@ function getObjectDetails(objectName: string) {
 // ============================================================================
 // Scans the folder to see which fields are marked as <required>true</required>.
 export function findFields(targetObject: string, rootDir: string): string[] {
+    // Get correct folder name
     const { folderName } = getObjectDetails(targetObject);
     const objectFolder = path.join(rootDir, folderName);
     const fieldsFolder = path.join(objectFolder, 'fields');
 
+    // If folder doesn't exist, stop.
     if (!fs.existsSync(fieldsFolder)) return [];
 
+    // Read all files in the fields folder
     const files = fs.readdirSync(fieldsFolder);
     const requiredFields: string[] = [];
 
+    // Loop through files to find required ones
     files.forEach(file => {
         const content = fs.readFileSync(path.join(fieldsFolder, file), 'utf8');
         // Regex: Extract the API name between <fullName> tags
@@ -154,6 +164,7 @@ export function createPermissionSet(targetObject: string, rootDir: string): void
 // ============================================================================
 // FUNCTION: Create Records (Data JSON)
 // ============================================================================
+// This function generates the JSON file to import data.
 export function createRecords(
     targetObject: string, 
     recordList: RecordDefinition[], 
@@ -167,7 +178,8 @@ export function createRecords(
     if (nameFieldOptions && nameFieldOptions.type === 'AutoNumber') {
         console.log(`ℹ️  Note: Object '${targetObject}' uses AutoNumber. You do not need to provide a 'Name' field.`);
     }
-
+    
+    // Loop through every record provided
     const formattedRecords = recordList.map((record, index) => {
         
         // Warning: Don't provide 'Name' for AutoNumber objects
@@ -185,6 +197,7 @@ export function createRecords(
         });
         
         // Add Attributes tag (Salesforce Requirement)
+        // Return the formatted record with Salesforce attributes
         return {
             attributes: { type: apiName, referenceId: `ref${index}` },
             ...record
@@ -198,6 +211,7 @@ export function createRecords(
     const outputPath = path.join(dataFolder, `${targetObject}-data.json`);
     const finalOutput = { records: formattedRecords };
     
+    // Write the file to disk
     fs.writeFileSync(outputPath, JSON.stringify(finalOutput, null, 4));
     console.log(`✅ Data File Generated: ${outputPath}`);
     return outputPath;
@@ -217,11 +231,12 @@ export function createObject(
     const objectFolder = path.join(parentDirectory, folderName);
     const fieldsFolder = path.join(objectFolder, 'fields');
 
-    // Create folders
+    // Create the folders if they don't exist
     if (!fs.existsSync(fieldsFolder)) fs.mkdirSync(fieldsFolder, { recursive: true });
 
     // Generate XML for the "Name" field (Column A)
     let nameFieldXml = '';
+    // If no options provided, default to a Text field
     if (!nameFieldOptions) {
         // Default: Standard Text Name
         nameFieldXml = `<nameField><label>${label} Name</label><type>Text</type></nameField>`;
@@ -230,6 +245,7 @@ export function createObject(
             // AutoNumber Configuration
             if (!nameFieldOptions.displayFormat) throw new Error("AutoNumber requires a displayFormat (e.g. OF-{0000})");
             
+            // Build AutoNumber XML
             nameFieldXml = `
     <nameField>
         <displayFormat>${nameFieldOptions.displayFormat}</displayFormat>
@@ -239,11 +255,12 @@ export function createObject(
     </nameField>`;
         } else {
             // Explicit Text Configuration
+            // Build Text XML
             nameFieldXml = `<nameField><label>${nameFieldOptions.label}</label><type>Text</type></nameField>`;
         }
     }
 
-    // Build Object XML with Enterprise Features enabled
+    // Build Main Object XML with Enterprise Features enabled
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>${apiName}</fullName>
@@ -260,6 +277,7 @@ export function createObject(
     ${nameFieldXml}
 </CustomObject>`;
 
+    // Save the file
     fs.writeFileSync(path.join(objectFolder, `${apiName}.object-meta.xml`), xmlContent);
     return fieldsFolder;
 }
@@ -273,11 +291,14 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
         
         // Logic: Use user label if provided, otherwise prettify the API Name
         const label = field.label ? field.label : field.name.replace(/_/g, ' '); 
+
+        // Logic: Is it required?
         const isRequired = field.required ? 'true' : 'false';
         
         // Logic: Use description if provided, otherwise empty
         const descriptionTag = field.description ? `<description>${field.description}</description>` : '';
 
+        // Logic: Add extra tags for specific types (Currency/Number/Text)
         let extraTags = '';
         switch (field.type) {
             case 'Currency':
@@ -295,6 +316,7 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
                 break;
         }
 
+        // Build Field XML
         const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>${apiName}</fullName>
@@ -305,6 +327,7 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
     ${extraTags}
 </CustomField>`;
 
+    // Save the file
         fs.writeFileSync(path.join(fieldsDir, `${apiName}.field-meta.xml`), xmlContent);
         console.log(`   Created Field: ${apiName} (Label: "${label}")`);
     });
@@ -325,12 +348,13 @@ export function createTab(targetObject: string, rootDir: string, iconStyle: stri
     <description>Created via automation script</description>
 </CustomTab>`;
 
+// Save the file
     fs.writeFileSync(path.join(tabsFolder, `${apiName}.tab-meta.xml`), xmlContent);
     console.log(`✨ Created Tab: ${apiName}`);
 }
 
 // ============================================================================
-// FUNCTION: Add Tab to App (The Helper)
+// FUNCTION: Add Tab to App Navigation menu (The Helper)
 // ============================================================================
 export function addTabToApp(targetApp: string, targetObject: string, rootDir: string): void {
     const { apiName } = getObjectDetails(targetObject);
@@ -359,7 +383,7 @@ export function addTabToApp(targetApp: string, targetObject: string, rootDir: st
     } else {
         content = content.replace('</CustomApplication>', `    ${tabTag}\n</CustomApplication>`);
     }
-
+ // Save the file
     fs.writeFileSync(appPath, content);
     console.log(`✅ Added ${apiName} to App: ${targetApp}`);
 }
