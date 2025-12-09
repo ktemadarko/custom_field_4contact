@@ -20,4 +20,5 @@
     <tabs>standard-Product2</tabs>
     <tabs>standard-report</tabs>
     <tabs>standard-Dashboard</tabs>
+    <tabs>Offer__c</tabs>
 </CustomApplication>
