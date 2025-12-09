@@ -442,7 +442,7 @@ export function addFieldToLayout(
 // EXECUTION
 // ============================================================================
 
-const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('runFieldsExercise.ts');
+const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('createFields.ts');
 
 if (isRunningDirectly) {
     console.log('🚀 Starting Automation Script...');
