@@ -504,34 +504,35 @@ if (isRunningDirectly) {
     // API Name: Favorite__c
     const favPath = createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
 
-    createFields(favPath, [
-        { 
-            name: 'Notes', 
-            label: 'Personal Notes', 
-            type: 'TextArea', 
-            description: 'Why do you like this property?', 
-            required: false 
+    //createFields(favPath, [
+        //{ 
+           // name: 'Notes', 
+           // label: 'Personal Notes', 
+           // type: 'TextArea', 
+           // description: 'Why do you like this property?', 
+           // required: false 
         },
         // In real life, you would likely have a Lookup relationship to Property here
         // For now, we will just add a Rating field
-        { 
-            name: 'Rating', 
-            label: 'Rating (1-5)', 
-            type: 'Number', 
-            description: 'Rate this property', 
-            required: true 
-        }
-    ]);
+       // { 
+       //     name: 'Rating', 
+        //    label: 'Rating (1-5)', 
+       //     type: 'Number', 
+       //     description: 'Rate this property', 
+       //     required: true 
+       // }
+   // ]);
 
     // 3. Tab, Layout, Permissions, App
     createTab('Favorite', ROOT_DIR, 'Custom11: Star'); // Star icon for Favorites
+    addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
     
     createLayout('Favorite', ROOT_DIR);
-    addFieldToLayout('Favorite__c-Favorite Layout', 'Notes__c', ROOT_DIR);
-    addFieldToLayout('Favorite__c-Favorite Layout', 'Rating__c', ROOT_DIR);
+    //addFieldToLayout('Favorite__c-Favorite Layout', 'Notes__c', ROOT_DIR);
+    //addFieldToLayout('Favorite__c-Favorite Layout', 'Rating__c', ROOT_DIR);
     
-    createPermissionSet('Favorite', ROOT_DIR); 
-    addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
+   createPermissionSet('Favorite', ROOT_DIR); 
+    
 
     console.log('\n✨ All Objects Built Successfully.');
 }
