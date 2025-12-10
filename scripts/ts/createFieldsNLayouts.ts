@@ -452,15 +452,19 @@ export function addFieldToLayout(
 // EXECUTION
 // ============================================================================
 
-// FIX: Corrected filename check for the combined file
-const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('createFieldsNLayouts.ts');
+const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('createFields.ts');
 
 if (isRunningDirectly) {
     console.log('🚀 Starting Automation Script...');
 
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
-    // 1. Configure AutoNumber Name
+    // =========================================================
+    // PART A: BUILD "OFFER" OBJECT
+    // =========================================================
+    console.log('\n--- Building Offer Object ---');
+    
+    // 1. Config
     const offerNameOptions: NameFieldOptions = {
         label: 'Offer Name',          
         type: 'AutoNumber',           
@@ -468,53 +472,66 @@ if (isRunningDirectly) {
         startingNumber: 1             
     };
 
-    // 2. Create Object: Offer
-    const fieldsPath = createObject(
-        ROOT_DIR, 
-        'Offer', 
-        'Offer', 
-        'Offers',
-        offerNameOptions
-    );
+    // 2. Object & Fields
+    const offerPath = createObject(ROOT_DIR, 'Offer', 'Offer', 'Offers', offerNameOptions);
+    
+    createFields(offerPath, [
+        { name: 'Offer_Amount', label: 'Offer Amount', type: 'Currency', required: true },
+        { name: 'Target_Close_Date', label: 'Target Close Date', type: 'Date', required: true }
+    ]);
 
-    // 3. Define Fields
-    const myFields: FieldDefinition[] = [
-        { 
-            name: 'Offer_Amount',          
-            label: 'Offer Amount',         
-            type: 'Currency',
-            description: 'The monetary value of the offer', 
-            required: true 
-        },
-        { 
-            name: 'Target_Close_Date',     
-            label: 'Target Close Date',    
-            type: 'Date',
-            description: 'Proposed date to close the deal',
-            required: true 
-        }
-    ];
-
-    // 4. Generate Fields
-    createFields(fieldsPath, myFields);
-
-    // 5. Create Tab
+    // 3. Tab, Layout, Permissions, App
     createTab('Offer', ROOT_DIR, 'Custom1: Heart');
-
-    // 6. Create Permission Set
-    createPermissionSet('Offer', ROOT_DIR); 
-
-    // 7. Add to Sales App
-    addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
-
-    // 8. CREATE LAYOUT (New Step!)
-    // We create the file first so we have something to edit.
     createLayout('Offer', ROOT_DIR);
-
-    // 9. Update Layouts
-    // Now that the file exists, this will work!
     addFieldToLayout('Offer__c-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
     addFieldToLayout('Offer__c-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
+    createPermissionSet('Offer', ROOT_DIR); 
+    addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
+
+
+    // =========================================================
+    // PART B: BUILD "FAVORITES" OBJECT (New!)
+    // =========================================================
+    console.log('\n--- Building Favorites Object ---');
+
+    // 1. Config (Favorites usually just use a Text Name, e.g., "Fav-001" or user defined)
+    const favNameOptions: NameFieldOptions = {
+        label: 'Favorite Name',
+        type: 'Text' // Let user type a name like "My Dream Home"
+    };
+
+    // 2. Object & Fields
+    // API Name: Favorite__c
+    const favPath = createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
+
+    createFields(favPath, [
+        { 
+            name: 'Notes', 
+            label: 'Personal Notes', 
+            type: 'TextArea', 
+            description: 'Why do you like this property?', 
+            required: false 
+        },
+        // In real life, you would likely have a Lookup relationship to Property here
+        // For now, we will just add a Rating field
+        { 
+            name: 'Rating', 
+            label: 'Rating (1-5)', 
+            type: 'Number', 
+            description: 'Rate this property', 
+            required: true 
+        }
+    ]);
+
+    // 3. Tab, Layout, Permissions, App
+    createTab('Favorite', ROOT_DIR, 'Custom11: Star'); // Star icon for Favorites
     
-    console.log('✨ Script Finished Successfully.');
+    createLayout('Favorite', ROOT_DIR);
+    addFieldToLayout('Favorite__c-Favorite Layout', 'Notes__c', ROOT_DIR);
+    addFieldToLayout('Favorite__c-Favorite Layout', 'Rating__c', ROOT_DIR);
+    
+    createPermissionSet('Favorite', ROOT_DIR); 
+    addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
+
+    console.log('\n✨ All Objects Built Successfully.');
 }
