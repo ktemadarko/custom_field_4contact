@@ -460,9 +460,9 @@ if (isRunningDirectly) {
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
     // =========================================================
-    // PART A: BUILD "OFFER" OBJECT
+    // PART A: BUILD OBJECTS
     // =========================================================
-    console.log('\n--- Building Offer Object ---');
+    console.log('\n--- Building Offer and Favorite Object ---');
     
     // 1. Config
     const offerNameOptions: NameFieldOptions = {
@@ -472,8 +472,17 @@ if (isRunningDirectly) {
         startingNumber: 1             
     };
 
+    // 1. Config (Favorites usually just use a Text Name, e.g., "Fav-001" or user defined)
+    const favNameOptions: NameFieldOptions = {
+        label: 'Favorite Name',
+        type: 'Text' // Let user type a name like "My Dream Home"
+    };
+
     // 2. Object & Fields
     const offerPath = createObject(ROOT_DIR, 'Offer', 'Offer', 'Offers', offerNameOptions);
+     // API Name: Favorite__c
+    const favPath = createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
+
     
     createFields(offerPath, [
         { name: 'Offer_Amount', label: 'Offer Amount', type: 'Currency', required: true },
@@ -482,28 +491,30 @@ if (isRunningDirectly) {
 
     // 3. Tab, Layout, Permissions, App
     createTab('Offer', ROOT_DIR, 'Custom1: Heart');
+    createTab('Favorite', ROOT_DIR, 'Custom11: Star'); // Star icon for Favorites
+
     createLayout('Offer', ROOT_DIR);
+    createLayout('Favorite', ROOT_DIR);
+    
     addFieldToLayout('Offer__c-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
     addFieldToLayout('Offer__c-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
+
     createPermissionSet('Offer', ROOT_DIR); 
+    createPermissionSet('Favorite', ROOT_DIR); 
+
     addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
+    addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
+
+    console.log('\n✨ All Objects Built Successfully.');
 
 
     // =========================================================
     // PART B: BUILD "FAVORITES" OBJECT (New!)
     // =========================================================
-    console.log('\n--- Building Favorites Object ---');
+    // console.log('\n--- Building Favorites Object ---');
 
-    // 1. Config (Favorites usually just use a Text Name, e.g., "Fav-001" or user defined)
-    const favNameOptions: NameFieldOptions = {
-        label: 'Favorite Name',
-        type: 'Text' // Let user type a name like "My Dream Home"
-    };
 
-    // 2. Object & Fields
-    // API Name: Favorite__c
-    const favPath = createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
-
+    
     //createFields(favPath, [
         //{ 
            // name: 'Notes', 
@@ -523,16 +534,14 @@ if (isRunningDirectly) {
        // }
    // ]);
 
-    // 3. Tab, Layout, Permissions, App
-    createTab('Favorite', ROOT_DIR, 'Custom11: Star'); // Star icon for Favorites
-    addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
     
-    createLayout('Favorite', ROOT_DIR);
+    
+    
     //addFieldToLayout('Favorite__c-Favorite Layout', 'Notes__c', ROOT_DIR);
     //addFieldToLayout('Favorite__c-Favorite Layout', 'Rating__c', ROOT_DIR);
     
-    createPermissionSet('Favorite', ROOT_DIR); 
+    
     
 
-    console.log('\n✨ All Objects Built Successfully.');
+    
 }
