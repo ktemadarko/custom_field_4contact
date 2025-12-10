@@ -486,6 +486,8 @@ if (isRunningDirectly) {
     // 5. Create Tab
     createTab('Offer', ROOT_DIR, 'Custom1: Heart');
 
+    //createLayout('Offer', ROOT_DIR);
+
     // 6. Create Permission Set (XML Only)
     createPermissionSet('Offer', ROOT_DIR); 
 
@@ -493,8 +495,35 @@ if (isRunningDirectly) {
     addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
 
     // 8. Update Page Layouts
-    addFieldToLayout('Offer-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
-    addFieldToLayout('Offer-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
+    //addFieldToLayout('Offer-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
+    //addFieldToLayout('Offer-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
     
-    console.log('✨ Script Finished Successfully.');
+console.log('\n--- Building Favorites Object (Standard Only) ---');
+
+    // 1. Config: Use a Text Name for Favorites (e.g. "My Dream House")
+    const favNameOptions: NameFieldOptions = {
+        label: 'Favorite Name',
+        type: 'Text' 
+    };
+
+    // 2. Object: This creates the table with standard fields (Id, Owner, Name, System Fields)
+    createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
+
+    // 3. Fields: SKIPPED (We want no custom fields)
+    
+    // 4. Tab: Needed to see it in the UI
+    createTab('Favorite', ROOT_DIR, 'Custom11: Star'); 
+    
+    // 5. Layout: Creates the default page with just Name, Owner, CreatedBy
+    //createLayout('Favorite', ROOT_DIR);
+    
+    // 6. Add Fields to Layout: SKIPPED (No custom fields to add!)
+    
+    // 7. Permissions: Grants access to the object and the standard Name field
+    createPermissionSet('Favorite', ROOT_DIR); 
+    
+    // 8. App: Adds the tab to the Sales App
+    addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
+
+    console.log('\n✨ All Objects Built Successfully.');
 }
