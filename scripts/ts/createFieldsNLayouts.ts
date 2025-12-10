@@ -481,7 +481,7 @@ if (isRunningDirectly) {
     // 2. Object & Fields
     const offerPath = createObject(ROOT_DIR, 'Offer', 'Offer', 'Offers', offerNameOptions);
      // API Name: Favorite__c
-    const favPath = createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
+    createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
 
     
     createFields(offerPath, [
