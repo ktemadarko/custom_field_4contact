@@ -511,7 +511,7 @@ if (isRunningDirectly) {
            // type: 'TextArea', 
            // description: 'Why do you like this property?', 
            // required: false 
-        },
+        //},
         // In real life, you would likely have a Lookup relationship to Property here
         // For now, we will just add a Rating field
        // { 
@@ -531,7 +531,7 @@ if (isRunningDirectly) {
     //addFieldToLayout('Favorite__c-Favorite Layout', 'Notes__c', ROOT_DIR);
     //addFieldToLayout('Favorite__c-Favorite Layout', 'Rating__c', ROOT_DIR);
     
-   createPermissionSet('Favorite', ROOT_DIR); 
+    createPermissionSet('Favorite', ROOT_DIR); 
     
 
     console.log('\n✨ All Objects Built Successfully.');
