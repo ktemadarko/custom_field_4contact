@@ -460,10 +460,11 @@ if (isRunningDirectly) {
     const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
     // =========================================================
-    // PART A: BUILD "OFFER" (Keep this as is)
+    // PART A: BUILD OBJECTS
     // =========================================================
-    console.log('\n--- Building Offer Object ---');
+    console.log('\n--- Building Offer and Favorite Object ---');
     
+    // 1. Config
     const offerNameOptions: NameFieldOptions = {
         label: 'Offer Name',          
         type: 'AutoNumber',           
@@ -471,50 +472,76 @@ if (isRunningDirectly) {
         startingNumber: 1             
     };
 
+    // 1. Config (Favorites usually just use a Text Name, e.g., "Fav-001" or user defined)
+    const favNameOptions: NameFieldOptions = {
+        label: 'Favorite Name',
+        type: 'Text' // Let user type a name like "My Dream Home"
+    };
+
+    // 2. Object & Fields
     const offerPath = createObject(ROOT_DIR, 'Offer', 'Offer', 'Offers', offerNameOptions);
+     // API Name: Favorite__c
+    createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
+
     
     createFields(offerPath, [
         { name: 'Offer_Amount', label: 'Offer Amount', type: 'Currency', required: true },
         { name: 'Target_Close_Date', label: 'Target Close Date', type: 'Date', required: true }
     ]);
 
+    // 3. Tab, Layout, Permissions, App
     createTab('Offer', ROOT_DIR, 'Custom1: Heart');
+    createTab('Favorite', ROOT_DIR, 'Custom11: Star'); // Star icon for Favorites
+
     createLayout('Offer', ROOT_DIR);
-    addFieldToLayout('Offer__c-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
-    addFieldToLayout('Offer__c-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
-    createPermissionSet('Offer', ROOT_DIR); 
-    addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
-
-
-    // =========================================================
-    // PART B: BUILD "FAVORITES" (Standard Fields Only)
-    // =========================================================
-    console.log('\n--- Building Favorites Object (Standard Only) ---');
-
-    // 1. Config: Use a Text Name for Favorites (e.g. "My Dream House")
-    const favNameOptions: NameFieldOptions = {
-        label: 'Favorite Name',
-        type: 'Text' 
-    };
-
-    // 2. Object: This creates the table with standard fields (Id, Owner, Name, System Fields)
-    createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
-
-    // 3. Fields: SKIPPED (We want no custom fields)
-    
-    // 4. Tab: Needed to see it in the UI
-    createTab('Favorite', ROOT_DIR, 'Custom11: Star'); 
-    
-    // 5. Layout: Creates the default page with just Name, Owner, CreatedBy
     createLayout('Favorite', ROOT_DIR);
     
-    // 6. Add Fields to Layout: SKIPPED (No custom fields to add!)
-    
-    // 7. Permissions: Grants access to the object and the standard Name field
+    addFieldToLayout('Offer__c-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
+    addFieldToLayout('Offer__c-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
+
+    createPermissionSet('Offer', ROOT_DIR); 
     createPermissionSet('Favorite', ROOT_DIR); 
-    
-    // 8. App: Adds the tab to the Sales App
+
+    addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
     addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
 
     console.log('\n✨ All Objects Built Successfully.');
+
+
+    // =========================================================
+    // PART B: BUILD "FAVORITES" OBJECT (New!)
+    // =========================================================
+    // console.log('\n--- Building Favorites Object ---');
+
+
+    
+    //createFields(favPath, [
+        //{ 
+           // name: 'Notes', 
+           // label: 'Personal Notes', 
+           // type: 'TextArea', 
+           // description: 'Why do you like this property?', 
+           // required: false 
+        //},
+        // In real life, you would likely have a Lookup relationship to Property here
+        // For now, we will just add a Rating field
+       // { 
+       //     name: 'Rating', 
+        //    label: 'Rating (1-5)', 
+       //     type: 'Number', 
+       //     description: 'Rate this property', 
+       //     required: true 
+       // }
+   // ]);
+
+    
+    
+    
+    //addFieldToLayout('Favorite__c-Favorite Layout', 'Notes__c', ROOT_DIR);
+    //addFieldToLayout('Favorite__c-Favorite Layout', 'Rating__c', ROOT_DIR);
+    
+    
+    
+
+    
 }
