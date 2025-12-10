@@ -452,7 +452,7 @@ export function addFieldToLayout(
 // EXECUTION
 // ============================================================================
 
-const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('createFieldsNLayouts.ts');
+const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('createFields.ts');
 
 if (isRunningDirectly) {
     console.log('🚀 Starting Automation Script...');
@@ -474,8 +474,8 @@ if (isRunningDirectly) {
     const offerPath = createObject(ROOT_DIR, 'Offer', 'Offer', 'Offers', offerNameOptions);
     
     createFields(offerPath, [
-        { name: 'Offer_Amount', label: 'Offer Amount', type: 'Currency' },
-        { name: 'Target_Close_Date', label: 'Target Close Date', type: 'Date' }
+        { name: 'Offer_Amount', label: 'Offer Amount', type: 'Currency', required: true },
+        { name: 'Target_Close_Date', label: 'Target Close Date', type: 'Date', required: true }
     ]);
 
     createTab('Offer', ROOT_DIR, 'Custom1: Heart');

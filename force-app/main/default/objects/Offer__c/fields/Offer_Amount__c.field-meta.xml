@@ -3,7 +3,6 @@
     <fullName>Offer_Amount__c</fullName>
     <label>Offer Amount</label>
     <type>Currency</type>
-    
     <required>false</required>
     <precision>18</precision>
     <scale>2</scale>

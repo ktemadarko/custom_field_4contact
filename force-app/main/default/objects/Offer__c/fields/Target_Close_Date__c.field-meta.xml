@@ -3,7 +3,5 @@
     <fullName>Target_Close_Date__c</fullName>
     <label>Target Close Date</label>
     <type>Date</type>
-    
     <required>false</required>
-    
 </CustomField>

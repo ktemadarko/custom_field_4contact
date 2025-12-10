@@ -35,7 +35,7 @@ const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('assignPer
 if (isRunningDirectly) {
     // HARDCODED CONFIGURATION FOR THIS RUN
     const TARGET_ORG = 'my_dev_org'; 
+    const PERM_SET_NAME = 'Offer_Manager';
 
-    assignPermissionSet('Offer_Manager', TARGET_ORG);
-    assignPermissionSet('Favorite_Manager', TARGET_ORG);
+    assignPermissionSet(PERM_SET_NAME, TARGET_ORG);
 }
