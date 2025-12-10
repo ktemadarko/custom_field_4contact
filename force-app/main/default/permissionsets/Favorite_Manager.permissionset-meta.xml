@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <label>Offer Manager</label>
+    <label>Favorite Manager</label>
     <hasActivationRequired>false</hasActivationRequired>
     <objectPermissions>
         <allowCreate>true</allowCreate>
@@ -8,22 +8,12 @@
         <allowEdit>true</allowEdit>
         <allowRead>true</allowRead>
         <modifyAllRecords>true</modifyAllRecords>
-        <object>Offer__c</object>
+        <object>Favorite__c</object>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
     
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Offer__c.Offer_Amount__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>Offer__c.Target_Close_Date__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
     <tabSettings>
-        <tab>Offer__c</tab>
+        <tab>Favorite__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
 </PermissionSet>
