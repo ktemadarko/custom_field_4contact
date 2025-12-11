@@ -1,16 +1,17 @@
 // ============================================================================
-// FILE: scripts/ts/createFields.ts
+// FILE: scripts/ts/createFieldsNLayouts.ts
 // PURPOSE: A library of functions to generate Salesforce metadata XML files.
+//          Includes logic for Objects, Fields, Tabs, Layouts, and Related Lists.
 // ============================================================================
 
 import * as fs from 'fs';   
 import * as path from 'path'; 
 
 // ============================================================================
-// DEFINITIONS
+// DEFINITIONS (Types & Interfaces)
 // ============================================================================
 
-export type FieldType = 'Text' | 'Number' | 'Currency' | 'Checkbox' | 'Date' | 'DateTime' | 'Email' | 'Percent' | 'Phone' | 'Url' | 'TextArea';
+export type FieldType = 'Text' | 'Number' | 'Currency' | 'Checkbox' | 'Date' | 'DateTime' | 'Email' | 'Percent' | 'Phone' | 'Url' | 'TextArea' | 'Lookup';
 
 export interface FieldDefinition {
     name: string;          
@@ -18,6 +19,9 @@ export interface FieldDefinition {
     type: FieldType;       
     description?: string;  
     required?: boolean;    
+    referenceTo?: string;       // e.g. "Contact"
+    relationshipLabel?: string; // e.g. "Favorites"
+    relationshipName?: string;  // e.g. "Favorites"
 }
 
 export interface RecordDefinition {
@@ -260,6 +264,17 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
             case 'Phone':
                 extraTags = '<length>255</length>';
                 break;
+            case 'Lookup':
+                if (!field.referenceTo) throw new Error(`Field ${field.name} is a Lookup but missing 'referenceTo'.`);
+                const relLabel = field.relationshipLabel || label;
+                const relName = field.relationshipName || field.name;
+                
+                extraTags = `
+    <deleteConstraint>SetNull</deleteConstraint>
+    <referenceTo>${field.referenceTo}</referenceTo>
+    <relationshipLabel>${relLabel}</relationshipLabel>
+    <relationshipName>${relName}</relationshipName>`;
+                break;
         }
 
         const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
@@ -330,7 +345,7 @@ export function addTabToApp(targetApp: string, targetObject: string, rootDir: st
 }
 
 // ============================================================================
-// FUNCTION: Create Layout (NEW - Creates the Layout File Locally)
+// FUNCTION: Create Layout
 // ============================================================================
 export function createLayout(targetObject: string, rootDir: string): void {
     const { apiName } = getObjectDetails(targetObject);
@@ -340,7 +355,6 @@ export function createLayout(targetObject: string, rootDir: string): void {
         fs.mkdirSync(layoutsFolder, { recursive: true });
     }
 
-    // Standard Salesforce Layout Structure (Information + System Info sections)
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <Layout xmlns="http://soap.sforce.com/2006/04/metadata">
     <layoutSections>
@@ -390,9 +404,6 @@ export function createLayout(targetObject: string, rootDir: string): void {
     </layoutSections>
 </Layout>`;
 
-    // Layout Name: "Offer__c-Offer Layout"
-    // Note: Standard convention is "ObjectName-LayoutName"
-    // We strip the __c from the label part to make it "Offer Layout"
     const simpleName = targetObject.replace('__c', '');
     const layoutFileName = `${apiName}-${simpleName} Layout.layout-meta.xml`;
 
@@ -401,7 +412,7 @@ export function createLayout(targetObject: string, rootDir: string): void {
 }
 
 // ============================================================================
-// FUNCTION: Update Layout (Injects Fields)
+// FUNCTION: Update Layout (Add Field)
 // ============================================================================
 export function addFieldToLayout(
     layoutName: string, 
@@ -414,7 +425,7 @@ export function addFieldToLayout(
     const layoutPath = path.join(layoutsFolder, layoutFileName);
 
     if (!fs.existsSync(layoutPath)) {
-        console.log(`❌ Warning: Layout '${layoutFileName}' not found.`);
+        console.log(`❌ Warning: Layout '${layoutFileName}' not found. Run 'sf project retrieve ...' to get it.`);
         return;
     }
 
@@ -431,7 +442,6 @@ export function addFieldToLayout(
                     <field>${fieldName}</field>
                 </layoutItems>`;
 
-    // Use string pattern for regex
     const regexPattern = "<layoutSections>[\\s\\S]*?<style>TwoColumns.*?</style>[\\s\\S]*?<layoutColumns>([\\s\\S]*?)</layoutColumns>";
     const twoColumnRegex = new RegExp(regexPattern);
 
@@ -449,99 +459,149 @@ export function addFieldToLayout(
 }
 
 // ============================================================================
+// FUNCTION: Add Related List to Layout (NEW)
+// ============================================================================
+export function addRelatedListToLayout(
+    layoutName: string, 
+    childObject: string, 
+    lookupField: string, 
+    rootDir: string
+): void {
+    const layoutsFolder = path.join(rootDir, '..', 'layouts');
+    const layoutFileName = layoutName.endsWith('.layout-meta.xml') ? layoutName : `${layoutName}.layout-meta.xml`;
+    const layoutPath = path.join(layoutsFolder, layoutFileName);
+
+    // Ensure the user has the layout file locally
+    if (!fs.existsSync(layoutPath)) {
+        console.log(`❌ Warning: Layout '${layoutFileName}' not found. Run 'sf project retrieve ...' to get it.`);
+        return;
+    }
+
+    let content = fs.readFileSync(layoutPath, 'utf8');
+    
+    // Construct the Unique Related List ID (ChildObject.LookupField)
+    // e.g. "Favorite__c.Contact__c"
+    const relatedListId = `${childObject}.${lookupField}`;
+
+    if (content.includes(`<relatedList>${relatedListId}</relatedList>`)) {
+        console.log(`ℹ️  Related List '${relatedListId}' already on layout '${layoutName}'.`);
+        return;
+    }
+
+    // Define XML for Related List
+    const relatedListXml = `
+    <relatedLists>
+        <fields>NAME</fields>
+        <relatedList>${relatedListId}</relatedList>
+    </relatedLists>`;
+
+    // Insert it before the end of the file
+    content = content.replace('</Layout>', `${relatedListXml}\n</Layout>`);
+    
+    fs.writeFileSync(layoutPath, content);
+    console.log(`✅ Added Related List '${relatedListId}' to ${layoutName}`);
+}
+
+// ============================================================================
 // EXECUTION
 // ============================================================================
 
-const isRunningDirectly = process.argv[1] && process.argv[1].endsWith('createFields.ts');
+// 1. Remove the "isRunningDirectly" check. 
+console.log('🚀 Starting Automation Script...');
 
-if (isRunningDirectly) {
-    console.log('🚀 Starting Automation Script...');
+const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
 
-    const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
+// =========================================================
+// PART A: BUILD "OFFER" 
+// =========================================================
+console.log('\n--- Building Offer Object ---');
 
-    // =========================================================
-    // PART A: BUILD OBJECTS
-    // =========================================================
-    console.log('\n--- Building Offer and Favorite Object ---');
-    
-    // 1. Config
-    const offerNameOptions: NameFieldOptions = {
-        label: 'Offer Name',          
-        type: 'AutoNumber',           
-        displayFormat: 'OF-{0000}',   
-        startingNumber: 1             
-    };
+const offerNameOptions: NameFieldOptions = {
+    label: 'Offer Name',          
+    type: 'AutoNumber',           
+    displayFormat: 'OF-{0000}',   
+    startingNumber: 1             
+};
 
-    // 1. Config (Favorites usually just use a Text Name, e.g., "Fav-001" or user defined)
-    const favNameOptions: NameFieldOptions = {
-        label: 'Favorite Name',
-        type: 'Text' // Let user type a name like "My Dream Home"
-    };
+const offerPath = createObject(ROOT_DIR, 'Offer', 'Offer', 'Offers', offerNameOptions);
 
-    // 2. Object & Fields
-    const offerPath = createObject(ROOT_DIR, 'Offer', 'Offer', 'Offers', offerNameOptions);
-     // API Name: Favorite__c
-    createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
+createFields(offerPath, [
+    { name: 'Offer_Amount', label: 'Offer Amount', type: 'Currency', required: true },
+    { name: 'Target_Close_Date', label: 'Target Close Date', type: 'Date', required: true }
+]);
 
-    
-    createFields(offerPath, [
-        { name: 'Offer_Amount', label: 'Offer Amount', type: 'Currency', required: true },
-        { name: 'Target_Close_Date', label: 'Target Close Date', type: 'Date', required: true }
-    ]);
-
-    // 3. Tab, Layout, Permissions, App
-    createTab('Offer', ROOT_DIR, 'Custom1: Heart');
-    createTab('Favorite', ROOT_DIR, 'Custom11: Star'); // Star icon for Favorites
-
-    createLayout('Offer', ROOT_DIR);
-    createLayout('Favorite', ROOT_DIR);
-    
-    addFieldToLayout('Offer__c-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
-    addFieldToLayout('Offer__c-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
-
-    createPermissionSet('Offer', ROOT_DIR); 
-    createPermissionSet('Favorite', ROOT_DIR); 
-
-    addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
-    addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
-
-    console.log('\n✨ All Objects Built Successfully.');
+createTab('Offer', ROOT_DIR, 'Custom1: Heart');
+createLayout('Offer', ROOT_DIR);
+addFieldToLayout('Offer__c-Offer Layout', 'Offer_Amount__c', ROOT_DIR);
+addFieldToLayout('Offer__c-Offer Layout', 'Target_Close_Date__c', ROOT_DIR);
+createPermissionSet('Offer', ROOT_DIR); 
+addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
 
 
-    // =========================================================
-    // PART B: BUILD "FAVORITES" OBJECT (New!)
-    // =========================================================
-    // console.log('\n--- Building Favorites Object ---');
+// =========================================================
+// PART B: BUILD "FAVORITES" (With Lookup)
+// =========================================================
+console.log('\n--- Building Favorites Object ---');
 
+const favNameOptions: NameFieldOptions = {
+    label: 'Favorite Name',
+    type: 'Text' 
+};
 
-    
-    //createFields(favPath, [
-        //{ 
-           // name: 'Notes', 
-           // label: 'Personal Notes', 
-           // type: 'TextArea', 
-           // description: 'Why do you like this property?', 
-           // required: false 
-        //},
-        // In real life, you would likely have a Lookup relationship to Property here
-        // For now, we will just add a Rating field
-       // { 
-       //     name: 'Rating', 
-        //    label: 'Rating (1-5)', 
-       //     type: 'Number', 
-       //     description: 'Rate this property', 
-       //     required: true 
-       // }
-   // ]);
+const favPath = createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
 
-    
-    
-    
-    //addFieldToLayout('Favorite__c-Favorite Layout', 'Notes__c', ROOT_DIR);
-    //addFieldToLayout('Favorite__c-Favorite Layout', 'Rating__c', ROOT_DIR);
-    
-    
-    
+createFields(favPath, [
+    { 
+        name: 'Contact',            // API Name: Contact__c
+        label: 'Contact',           // UI Label
+        type: 'Lookup',
+        description: 'The person who favorited this item',
+        required: false,            
+        referenceTo: 'Contact',     // Pointing to Standard Contact Object
+        relationshipLabel: 'Favorites', 
+        relationshipName: 'Favorites'
+    }
+]);
 
-    
-}
+createTab('Favorite', ROOT_DIR, 'Custom11: Star'); 
+createLayout('Favorite', ROOT_DIR);
+addFieldToLayout('Favorite__c-Favorite Layout', 'Contact__c', ROOT_DIR); 
+createPermissionSet('Favorite', ROOT_DIR); 
+addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
+
+// =========================================================
+// PART C: UPDATE CONTACT LAYOUT (Related List)
+// =========================================================
+console.log('\n--- Updating Contact Layout ---');
+
+// NOTE: You must have retrieved this layout first! 
+// Command: sf project retrieve start -m "Layout:Contact-Contact (Marketing) Layout"
+addRelatedListToLayout(
+    'Contact-Contact %28Marketing%29 Layout', 
+    'Favorite__c',   // Child Object
+    'Contact__c',    // Lookup Field on Child
+    ROOT_DIR
+);
+
+addRelatedListToLayout(
+    'Contact-Contact %28Sales%29 Layout', 
+    'Favorite__c',   // Child Object
+    'Contact__c',    // Lookup Field on Child
+    ROOT_DIR
+);
+
+addRelatedListToLayout(
+    'Contact-Contact %28Support%29 Layout', 
+    'Favorite__c',   // Child Object
+    'Contact__c',    // Lookup Field on Child
+    ROOT_DIR
+);
+
+addRelatedListToLayout(
+    'Contact-Contact Layout', 
+    'Favorite__c',   // Child Object
+    'Contact__c',    // Lookup Field on Child
+    ROOT_DIR
+);
+
+console.log('\n✨ All Objects Built Successfully.');
