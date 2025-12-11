@@ -526,8 +526,8 @@ const offerNameOptions: NameFieldOptions = {
 const offerPath = createObject(ROOT_DIR, 'Offer', 'Offer', 'Offers', offerNameOptions);
 
 createFields(offerPath, [
-    { name: 'Offer_Amount', label: 'Offer Amount', type: 'Currency', required: true },
-    { name: 'Target_Close_Date', label: 'Target Close Date', type: 'Date', required: true }
+    { name: 'Offer_Amount', label: 'Offer Amount', type: 'Currency' },
+    { name: 'Target_Close_Date', label: 'Target Close Date', type: 'Date' }
 ]);
 
 createTab('Offer', ROOT_DIR, 'Custom1: Heart');
@@ -576,32 +576,32 @@ console.log('\n--- Updating Contact Layout ---');
 
 // NOTE: You must have retrieved this layout first! 
 // Command: sf project retrieve start -m "Layout:Contact-Contact (Marketing) Layout"
-addRelatedListToLayout(
-    'Contact-Contact %28Marketing%29 Layout', 
-    'Favorite__c',   // Child Object
-    'Contact__c',    // Lookup Field on Child
-    ROOT_DIR
-);
+//addRelatedListToLayout(
+   // 'Contact-Contact %28Marketing%29 Layout', 
+   // 'Favorite__c',   // Child Object
+   // 'Contact__c',    // Lookup Field on Child
+   // ROOT_DIR
+//);
 
-addRelatedListToLayout(
-    'Contact-Contact %28Sales%29 Layout', 
-    'Favorite__c',   // Child Object
-    'Contact__c',    // Lookup Field on Child
-    ROOT_DIR
-);
+//addRelatedListToLayout(
+  //  'Contact-Contact %28Sales%29 Layout', 
+    //'Favorite__c',   // Child Object
+    //'Contact__c',    // Lookup Field on Child
+    //ROOT_DIR
+//);
 
-addRelatedListToLayout(
-    'Contact-Contact %28Support%29 Layout', 
-    'Favorite__c',   // Child Object
-    'Contact__c',    // Lookup Field on Child
-    ROOT_DIR
-);
+//addRelatedListToLayout(
+  //  'Contact-Contact %28Support%29 Layout', 
+    //'Favorite__c',   // Child Object
+    //'Contact__c',    // Lookup Field on Child
+    //ROOT_DIR
+//);
 
-addRelatedListToLayout(
-    'Contact-Contact Layout', 
-    'Favorite__c',   // Child Object
-    'Contact__c',    // Lookup Field on Child
-    ROOT_DIR
-);
+//addRelatedListToLayout(
+  //  'Contact-Contact Layout', 
+    //'Favorite__c',   // Child Object
+    //'Contact__c',    // Lookup Field on Child
+   // ROOT_DIR
+//);
 
 console.log('\n✨ All Objects Built Successfully.');

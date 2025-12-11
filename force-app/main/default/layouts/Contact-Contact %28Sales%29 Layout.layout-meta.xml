@@ -269,4 +269,9 @@
     <showInteractionLogPanel>false</showInteractionLogPanel>
     <showRunAssignmentRulesCheckbox>true</showRunAssignmentRulesCheckbox>
     <showSubmitAndAttachButton>false</showSubmitAndAttachButton>
+
+    <relatedLists>
+        <fields>NAME</fields>
+        <relatedList>Favorite__c.Contact__c</relatedList>
+    </relatedLists>
 </Layout>

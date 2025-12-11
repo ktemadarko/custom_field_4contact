@@ -13,12 +13,7 @@
         
                 <layoutItems>
                     <behavior>Edit</behavior>
-                    <field>Offer_Amount__c</field>
-                </layoutItems>
-        
-                <layoutItems>
-                    <behavior>Edit</behavior>
-                    <field>Target_Close_Date__c</field>
+                    <field>Contact__c</field>
                 </layoutItems>
         </layoutColumns>
         <layoutColumns>
