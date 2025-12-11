@@ -1,10 +1,10 @@
 {
   "name": "salesforce-app",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "Salesforce App",
   "scripts": {
-    "build": "ts-node scripts/ts/createFields.ts",
+    "build": "ts-node scripts/ts/createFieldsNLayouts.ts",
     "assign-perm": "ts-node scripts/ts/assignPermission.ts",
     "lint": "eslint **/{aura,lwc}/**/*.js",
     "test": "npm run test:unit && npm run test:scripts",

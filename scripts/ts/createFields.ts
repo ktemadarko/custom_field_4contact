@@ -515,7 +515,7 @@ console.log('\n--- Building Favorites Object (Standard Only) ---');
     createTab('Favorite', ROOT_DIR, 'Custom11: Star'); 
     
     // 5. Layout: Creates the default page with just Name, Owner, CreatedBy
-    //createLayout('Favorite', ROOT_DIR);
+    createLayout('Favorite', ROOT_DIR);
     
     // 6. Add Fields to Layout: SKIPPED (No custom fields to add!)
     
