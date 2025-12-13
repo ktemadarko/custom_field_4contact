@@ -11,7 +11,8 @@ import * as path from 'path';
 // DEFINITIONS (Types & Interfaces)
 // ============================================================================
 
-export type FieldType = 'Text' | 'Number' | 'Currency' | 'Checkbox' | 'Date' | 'DateTime' | 'Email' | 'Percent' | 'Phone' | 'Url' | 'TextArea' | 'Lookup';
+// 1. ADDED 'Master-Detail' to the allowed types
+export type FieldType = 'Text' | 'Number' | 'Currency' | 'Checkbox' | 'Date' | 'DateTime' | 'Email' | 'Percent' | 'Phone' | 'Url' | 'TextArea' | 'Lookup' | 'Master-Detail';
 
 export interface FieldDefinition {
     name: string;          
@@ -19,7 +20,7 @@ export interface FieldDefinition {
     type: FieldType;       
     description?: string;  
     required?: boolean;    
-    referenceTo?: string;       // e.g. "Contact"
+    referenceTo?: string;       // e.g. "Contact" or "Property__c"
     relationshipLabel?: string; // e.g. "Favorites"
     relationshipName?: string;  // e.g. "Favorites"
 }
@@ -104,6 +105,10 @@ export function createPermissionSet(targetObject: string, rootDir: string): void
         const files = fs.readdirSync(fieldsFolder);
         files.forEach(file => {
             const fieldName = file.replace('.field-meta.xml', '');
+            
+            // Note: Master-Detail fields are strictly controlled by the parent
+            // and often cannot be given manual permission in a set.
+            // However, we attempt to add them here; Salesforce ignores what it doesn't need.
             fieldPermissions += `
     <fieldPermissions>
         <editable>true</editable>
@@ -240,7 +245,7 @@ export function createObject(
 }
 
 // ============================================================================
-// FUNCTION: Create Fields
+// FUNCTION: Create Fields (UPDATED)
 // ============================================================================
 export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): void {
     fieldList.forEach(field => {
@@ -248,7 +253,10 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
         const label = field.label ? field.label : field.name.replace(/_/g, ' '); 
         const isRequired = field.required ? 'true' : 'false';
         const descriptionTag = field.description ? `<description>${field.description}</description>` : '';
-
+        
+        // We need a variable for XML Type because "Master-Detail" needs to become "MasterDetail"
+        let xmlType = field.type as string; 
+        
         let extraTags = '';
         switch (field.type) {
             case 'Currency':
@@ -275,13 +283,30 @@ export function createFields(fieldsDir: string, fieldList: FieldDefinition[]): v
     <relationshipLabel>${relLabel}</relationshipLabel>
     <relationshipName>${relName}</relationshipName>`;
                 break;
+            
+            // 2. NEW LOGIC: MASTER-DETAIL
+            case 'Master-Detail':
+                if (!field.referenceTo) throw new Error(`Field ${field.name} is a Master-Detail but missing 'referenceTo'.`);
+                const mdLabel = field.relationshipLabel || label;
+                const mdName = field.relationshipName || field.name;
+                
+                // IMPORTANT: The XML type tag must be "MasterDetail" (no hyphen)
+                xmlType = 'MasterDetail';
+                
+                extraTags = `
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <referenceTo>${field.referenceTo}</referenceTo>
+    <relationshipLabel>${mdLabel}</relationshipLabel>
+    <relationshipName>${mdName}</relationshipName>`;
+                break;
         }
 
         const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>${apiName}</fullName>
     <label>${label}</label>
-    <type>${field.type}</type>
+    <type>${xmlType}</type>
     ${descriptionTag}
     <required>${isRequired}</required>
     ${extraTags}
@@ -459,7 +484,7 @@ export function addFieldToLayout(
 }
 
 // ============================================================================
-// FUNCTION: Add Related List to Layout (NEW)
+// FUNCTION: Add Related List to Layout
 // ============================================================================
 export function addRelatedListToLayout(
     layoutName: string, 
@@ -480,7 +505,6 @@ export function addRelatedListToLayout(
     let content = fs.readFileSync(layoutPath, 'utf8');
     
     // Construct the Unique Related List ID (ChildObject.LookupField)
-    // e.g. "Favorite__c.Contact__c"
     const relatedListId = `${childObject}.${lookupField}`;
 
     if (content.includes(`<relatedList>${relatedListId}</relatedList>`)) {
@@ -488,14 +512,13 @@ export function addRelatedListToLayout(
         return;
     }
 
-    // Define XML for Related List
     const relatedListXml = `
     <relatedLists>
         <fields>NAME</fields>
         <relatedList>${relatedListId}</relatedList>
     </relatedLists>`;
 
-    // Insert it before the end of the file
+    // Insert it before the end of the file (before </Layout>)
     content = content.replace('</Layout>', `${relatedListXml}\n</Layout>`);
     
     fs.writeFileSync(layoutPath, content);
@@ -506,7 +529,6 @@ export function addRelatedListToLayout(
 // EXECUTION
 // ============================================================================
 
-// 1. Remove the "isRunningDirectly" check. 
 console.log('🚀 Starting Automation Script...');
 
 const ROOT_DIR = path.join(process.cwd(), 'force-app/main/default/objects');
@@ -539,7 +561,7 @@ addTabToApp('standard__Sales', 'Offer', ROOT_DIR);
 
 
 // =========================================================
-// PART B: BUILD "FAVORITES" (With Lookup)
+// PART B: BUILD "FAVORITES" (With Lookup + Master-Detail)
 // =========================================================
 console.log('\n--- Building Favorites Object ---');
 
@@ -551,21 +573,36 @@ const favNameOptions: NameFieldOptions = {
 const favPath = createObject(ROOT_DIR, 'Favorite', 'Favorite', 'Favorites', favNameOptions);
 
 createFields(favPath, [
+    // LOOKUP to Contact
     { 
-        name: 'Contact',            // API Name: Contact__c
-        label: 'Contact',           // UI Label
+        name: 'Contact',            
+        label: 'Contact',           
         type: 'Lookup',
         description: 'The person who favorited this item',
         required: false,            
-        referenceTo: 'Contact',     // Pointing to Standard Contact Object
+        referenceTo: 'Contact',     
         relationshipLabel: 'Favorites', 
         relationshipName: 'Favorites'
-    }
+    },
+    // 3. NEW: MASTER-DETAIL to Property
+    { 
+        name: 'Property',            // API: Property__c
+        label: 'Property',           
+        type: 'Master-Detail',       // <--- NEW TYPE
+        description: 'The property being favorited',
+        required: true,              // M-D is always required
+        referenceTo: 'Property__c',  // Assuming your object is Property__c
+        relationshipLabel: 'Favorites', 
+        relationshipName: 'Favorites'
+    },
 ]);
 
 createTab('Favorite', ROOT_DIR, 'Custom11: Star'); 
 createLayout('Favorite', ROOT_DIR);
+
 addFieldToLayout('Favorite__c-Favorite Layout', 'Contact__c', ROOT_DIR); 
+addFieldToLayout('Favorite__c-Favorite Layout', 'Property__c', ROOT_DIR); // Add Property to Layout
+
 createPermissionSet('Favorite', ROOT_DIR); 
 addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
 
@@ -574,34 +611,11 @@ addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
 // =========================================================
 console.log('\n--- Updating Contact Layout ---');
 
-// NOTE: You must have retrieved this layout first! 
-// Command: sf project retrieve start -m "Layout:Contact-Contact (Marketing) Layout"
-//addRelatedListToLayout(
-   // 'Contact-Contact %28Marketing%29 Layout', 
-   // 'Favorite__c',   // Child Object
-   // 'Contact__c',    // Lookup Field on Child
-   // ROOT_DIR
-//);
-
-//addRelatedListToLayout(
-  //  'Contact-Contact %28Sales%29 Layout', 
-    //'Favorite__c',   // Child Object
-    //'Contact__c',    // Lookup Field on Child
-    //ROOT_DIR
-//);
-
-//addRelatedListToLayout(
-  //  'Contact-Contact %28Support%29 Layout', 
-    //'Favorite__c',   // Child Object
-    //'Contact__c',    // Lookup Field on Child
-    //ROOT_DIR
-//);
-
-//addRelatedListToLayout(
-  //  'Contact-Contact Layout', 
-    //'Favorite__c',   // Child Object
-    //'Contact__c',    // Lookup Field on Child
-   // ROOT_DIR
-//);
+addRelatedListToLayout(
+    'Contact-Contact %28Marketing%29 Layout', 
+    'Favorite__c',   // Child Object
+    'Contact__c',    // Lookup Field on Child
+    ROOT_DIR
+);
 
 console.log('\n✨ All Objects Built Successfully.');
