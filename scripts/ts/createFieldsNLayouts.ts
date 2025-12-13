@@ -606,16 +606,4 @@ addFieldToLayout('Favorite__c-Favorite Layout', 'Property__c', ROOT_DIR); // Add
 createPermissionSet('Favorite', ROOT_DIR); 
 addTabToApp('standard__Sales', 'Favorite', ROOT_DIR);
 
-// =========================================================
-// PART C: UPDATE CONTACT LAYOUT (Related List)
-// =========================================================
-console.log('\n--- Updating Contact Layout ---');
-
-addRelatedListToLayout(
-    'Contact-Contact %28Marketing%29 Layout', 
-    'Favorite__c',   // Child Object
-    'Contact__c',    // Lookup Field on Child
-    ROOT_DIR
-);
-
 console.log('\n✨ All Objects Built Successfully.');
