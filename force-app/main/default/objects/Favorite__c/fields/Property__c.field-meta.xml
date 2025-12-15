@@ -3,8 +3,8 @@
     <fullName>Property__c</fullName>
     <label>Property</label>
     <type>MasterDetail</type>
-    <description>The property being favorited</description>
-    <required>true</required>
+    
+    
     
     <writeRequiresMasterRead>false</writeRequiresMasterRead>
     <reparentableMasterDetail>false</reparentableMasterDetail>

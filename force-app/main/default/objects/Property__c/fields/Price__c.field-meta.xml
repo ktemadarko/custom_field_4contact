@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Price__c</fullName>
-    <label>Price</label>
+    <label>Listing Price</label>
     <type>Currency</type>
-    <description>The listed sale price of the home</description>
+    
     <required>true</required>
     <precision>18</precision>
     <scale>2</scale>

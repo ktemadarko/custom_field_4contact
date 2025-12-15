@@ -3,7 +3,7 @@
     <fullName>Contact__c</fullName>
     <label>Contact</label>
     <type>Lookup</type>
-    <description>The person who favorited this item</description>
+    
     <required>false</required>
     
     <deleteConstraint>SetNull</deleteConstraint>

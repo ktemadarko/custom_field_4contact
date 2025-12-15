@@ -5,8 +5,11 @@
     <pluralLabel>Properties</pluralLabel>
     <deploymentStatus>Deployed</deploymentStatus>
     <sharingModel>ReadWrite</sharingModel>
-    <nameField>
-        <label>Property Name</label>
-        <type>Text</type>
-    </nameField>
+    <enableSharing>true</enableSharing>
+    <enableBulkApi>true</enableBulkApi>
+    <enableStreamingApi>true</enableStreamingApi>
+    <enableActivities>true</enableActivities>
+    <enableReports>true</enableReports>
+    <enableSearch>true</enableSearch>
+    <nameField><label>Property Name</label><type>Text</type></nameField>
 </CustomObject>
